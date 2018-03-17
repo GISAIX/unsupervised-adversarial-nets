@@ -31,25 +31,25 @@ def conv_bn_relu(inputs, output_channels, kernel_size, stride, is_training, name
 
 # ResNeXt
 def transform_layer(inputs, bottleneck_d, is_training, name, padding='same',
-                    use_bias=False, dilation=1):
+                    use_bias=False, dilation=1, stride=1):
     with tf.variable_scope(name_or_scope=name):
         layer_0 = conv_bn_relu(inputs, bottleneck_d, kernel_size=1, stride=1, is_training=is_training,
                                name=name+'_i', padding=padding, use_bias=use_bias, dilation=dilation)
-        layer_1 = conv_bn_relu(layer_0, bottleneck_d, kernel_size=3, stride=1, is_training=is_training,
+        layer_1 = conv_bn_relu(layer_0, bottleneck_d, kernel_size=3, stride=stride, is_training=is_training,
                                name=name+'_ii', padding=padding, use_bias=use_bias, dilation=dilation)
         return layer_1
 
 
 def split_layer(inputs, cardinality, bottleneck_d, is_training, name,
-                padding='same', use_bias=False, dilation=1):
+                padding='same', use_bias=False, dilation=1, stride=1):
     with tf.variable_scope(name_or_scope=name):
         layers_group = list()
         for i in range(cardinality):
             layer = transform_layer(inputs, bottleneck_d, is_training, name+'_g'+str(i),
-                                    padding, use_bias, dilation)
+                                    padding, use_bias, dilation, stride=stride)
             layers_group.append(layer)
         concat_dimension = 4  # channels_last
-        return tf.concat(layers_group, axis=concat_dimension)
+        return tf.concat(layers_group, axis=concat_dimension, name=name)
 
 
 def transition_layer(inputs, output_channels, is_training, name, padding='same',
@@ -63,13 +63,14 @@ def transition_layer(inputs, output_channels, is_training, name, padding='same',
         return bn
 
 
-def aggregated_residual_layer(inputs, output_channels, cardinality, bottleneck_d, is_training,
-                              name, padding='same', use_bias=False, dilation=1, residual=True):
-    group = split_layer(inputs, cardinality, bottleneck_d, is_training, name, padding, use_bias, dilation)
+def aggregated_conv(inputs, output_channels, cardinality, bottleneck_d, is_training,
+                    name, padding='same', use_bias=False, dilation=1, residual=True, stride=1):
+    group = split_layer(inputs, cardinality, bottleneck_d, is_training, name,
+                        padding, use_bias, dilation, stride=stride)
     transition = transition_layer(group, output_channels, is_training, name, padding, use_bias, dilation)
     if residual:
         if transition.shape != inputs.shape:
-            extension = conv3d(inputs, output_channels, kernel_size=1, stride=1, padding='same',
+            extension = conv3d(inputs, output_channels, kernel_size=1, stride=stride, padding='same',
                                use_bias=True, name=name+'_residual', dilation=1)
             out = transition + extension
         else:
