@@ -99,3 +99,18 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# pycharm
+.idea/
+
+# mac
+.DS_Store
+
+# project
+json/
+logs/
+loss/
+test/
+checkpoint/
+supplement/*.jpg
+kernel/*.txt
