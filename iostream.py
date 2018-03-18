@@ -1,9 +1,9 @@
-import json
-import nibabel as nib
-import numpy as np
 from glob import glob
 from scipy.ndimage import rotate
 from skimage.transform import resize
+import json
+import nibabel as nib
+import numpy as np
 
 
 def load_image(image_path, label_path, scale=1):
@@ -43,11 +43,9 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         width_select = np.random.randint(width - input_size + 1)
 
         crop_position = np.array([depth_select, height_select, width_select])
-        label_crop = label[
-                     crop_position[0]:crop_position[0] + input_size,
-                     crop_position[1]:crop_position[1] + input_size,
-                     crop_position[2]:crop_position[2] + input_size
-                     ]
+        label_crop = label[crop_position[0]:crop_position[0] + input_size,
+                           crop_position[1]:crop_position[1] + input_size,
+                           crop_position[2]:crop_position[2] + input_size]
         '''
         # throw away part of defected training data?
         label_set = set(np.unique(label_crop))
@@ -60,11 +58,9 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         else:
             pass_flag = True
         '''
-        image_crop = image[
-                     crop_position[0]:crop_position[0] + input_size,
-                     crop_position[1]:crop_position[1] + input_size,
-                     crop_position[2]:crop_position[2] + input_size
-                     ]
+        image_crop = image[crop_position[0]:crop_position[0] + input_size,
+                           crop_position[1]:crop_position[1] + input_size,
+                           crop_position[2]:crop_position[2] + input_size]
         pass_flag = True
 
     # rotation and flipping
