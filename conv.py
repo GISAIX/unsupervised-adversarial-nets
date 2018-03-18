@@ -12,8 +12,7 @@ def conv3d(inputs, output_channels, kernel_size, stride, padding='same',
         kernel_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.01),
         kernel_regularizer=slim.l2_regularizer(scale=0.0005),
         bias_initializer=tf.zeros_initializer(),
-        name=name
-    )
+        name=name)
 
 
 def conv_bn_relu(inputs, output_channels, kernel_size, stride, is_training, name,
@@ -23,8 +22,7 @@ def conv_bn_relu(inputs, output_channels, kernel_size, stride, is_training, name
                       use_bias=use_bias, name=name+'_conv', dilation=dilation)
         bn = tf.contrib.layers.batch_norm(
             inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
-            updates_collections=None, is_training=is_training, scope=name+'_batch_norm'
-        )
+            updates_collections=None, is_training=is_training, scope=name+'_batch_norm')
         relu = tf.nn.relu(features=bn, name=name+'_relu')
     return relu
 
@@ -87,13 +85,11 @@ def deconv3d(inputs, output_channels, name='deconv'):
     dev_filter = tf.get_variable(
         name=name+'/filter', shape=[4, 4, 4, output_channels, in_channels],
         dtype=tf.float32, initializer=tf.random_normal_initializer(mean=0.0, stddev=0.01),
-        regularizer=slim.l2_regularizer(scale=0.0005)
-    )
+        regularizer=slim.l2_regularizer(scale=0.0005))
     deconv = tf.nn.conv3d_transpose(
         value=inputs, filter=dev_filter,
         output_shape=[batch, in_depth*2, in_height*2, in_width*2, output_channels],
-        strides=[1, 2, 2, 2, 1], padding='SAME', data_format='NDHWC', name=name
-    )
+        strides=[1, 2, 2, 2, 1], padding='SAME', data_format='NDHWC', name=name)
     '''Further adjustment in strides and filter shape'''
     return deconv
 
