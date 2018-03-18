@@ -6,7 +6,7 @@ def init_parameter(name):
     parameter['batch_size'] = 1
     parameter['input_size'] = 96
     parameter['input_channels'] = 1
-    parameter['output_size'] = 96
+    parameter['output_size'] = parameter['input_size']
     parameter['output_class'] = 3
     # learning strategy
     parameter['learning_rate'] = 0.01

@@ -1,36 +1,50 @@
 from conv import *
+from loss import *
+from iostream import *
+import os
+import numpy as np
 import tensorflow as tf
+import time
 
 
 class AdversarialNet:
-    def __init__(self, session, parameter_dict):
+    def __init__(self, session, parameter):
         self.session = session
-        self.parameter_dict = parameter_dict
+        self.parameter_dict = parameter
 
+        # variable declaration
         self.inputs = None
-        self.ground_truth = None
+        self.label = None
         self.domain = None
-        self.predicted_prob = None
         self.predicted_label = None
+        self.predicted_prob = None
+        self.predicted_domain = None
+        self.predicted_domain_prob = None
         self.auxiliary1_prob_1x = None
         self.auxiliary2_prob_1x = None
         self.auxiliary3_prob_1x = None
-        self.domain = None
-        self.predicted_domain = None
 
-        self.gpu_number = len(parameter_dict['gpu'].split(','))
-        if self.gpu_number > 1:
+        # frequently used parameters
+        self.batch_size = parameter['batch_size']
+        self.input_size = parameter['input_size']
+        self.input_channels = parameter['input_channels']
+        self.output_size = parameter['output_size']
+        self.output_class = parameter['output_class']
+        self.scale = parameter['scale']
+        self.feature_size = parameter['feature_size']
+        self.cardinality = int(self.feature_size / 4)
+        self.sample_from = parameter['sample_from']
+        self.sample_to = parameter['sample_to']
+        self.phase = parameter['phase']
+        self.augmentation = parameter['augmentation']
+        self.select_samples = parameter['select_samples']
+        # Todo: pay attention to priority of sample selection
+
+        gpu_number = len(parameter['gpu'].split(','))
+        if gpu_number > 1:
             self.device = ['/gpu:0', '/gpu:1', '/cpu:0']
         else:
             self.device = ['/gpu:0', '/gpu:0', '/cpu:0']
-
-        self.phase = parameter_dict['phase']
-        self.feature_size = parameter_dict['feature_size']
-        self.cardinality = int(self.feature_size/4)
-        self.output_class = parameter_dict['output_class']
-        self.batch_size = parameter_dict['batch_size']
-        self.input_size = parameter_dict['input_size']
-        self.input_channels = parameter_dict['input_channels']
 
         self.build_model()
 
@@ -171,26 +185,16 @@ class AdversarialNet:
         self.inputs = tf.placeholder(dtype=tf.float32,
                                      shape=[self.batch_size, self.input_size, self.input_size,
                                             self.input_size, self.input_channels], name='inputs')
-        self.ground_truth = tf.placeholder(dtype=tf.int32, shape=[self.batch_size, self.input_size,
-                                                                  self.input_size, self.input_size],
-                                           name='ground_truth')
-        self.predicted_prob, self.predicted_label, self.auxiliary1_prob_1x, self.auxiliary2_prob_1x,\
+        self.label = tf.placeholder(dtype=tf.int32, shape=[self.batch_size, self.input_size,
+                                                           self.input_size, self.input_size],
+                                    name='label')
+        self.predicted_prob, self.predicted_label, self.auxiliary1_prob_1x, self.auxiliary2_prob_1x, \
             self.auxiliary3_prob_1x, self.domain, self.predicted_domain = self.model(self.inputs)
+        '''loss'''
         print('Model built.')
 
+    def train(self):
+        pass
 
-if __name__ == '__main__':
-    with tf.Session() as sess:
-        parameter = dict()
-        parameter['gpu'] = '0,1'
-        parameter['phase'] = 'train'
-        parameter['feature_size'] = 32
-        parameter['output_class'] = 8
-        parameter['batch_size'] = 1
-        parameter['input_size'] = 96
-        parameter['input_channels'] = 1
-
-        net = AdversarialNet(sess, parameter)
-
-        writer = tf.summary.FileWriter('logs', sess.graph)
-        writer.close()
+    def test(self):
+        pass
