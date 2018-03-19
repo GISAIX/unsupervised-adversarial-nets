@@ -13,18 +13,33 @@ class AdversarialNet:
         self.parameter_dict = parameter
 
         # variable declaration
+        self.dice_ratio = 0.1
+        self.domain_ratio = 0.1
+        self.saver = None
         self.inputs = None
         self.label = None
-        self.domain = None
+        self.domain_label = None
+        self.predicted_feature = None
         self.predicted_label = None
-        self.predicted_prob = None
+        self.domain_feature = None
         self.predicted_domain = None
-        self.predicted_domain_prob = None
-        self.auxiliary1_prob_1x = None
-        self.auxiliary2_prob_1x = None
-        self.auxiliary3_prob_1x = None
+        self.auxiliary1_feature_1x = None
+        self.auxiliary2_feature_1x = None
+        self.auxiliary3_feature_1x = None
+        self.main_loss = None
+        self.auxiliary1_loss = None
+        self.auxiliary2_loss = None
+        self.auxiliary3_loss = None
+        self.seg_loss = None
+        self.adv_loss = None
+        self.loss = None
 
         # frequently used parameters
+        gpu_number = len(parameter['gpu'].split(','))
+        if gpu_number > 1:
+            self.device = ['/gpu:0', '/gpu:1', '/cpu:0']
+        else:
+            self.device = ['/gpu:0', '/gpu:0', '/cpu:0']
         self.batch_size = parameter['batch_size']
         self.input_size = parameter['input_size']
         self.input_channels = parameter['input_channels']
@@ -39,12 +54,6 @@ class AdversarialNet:
         self.augmentation = parameter['augmentation']
         self.select_samples = parameter['select_samples']
         # Todo: pay attention to priority of sample selection
-
-        gpu_number = len(parameter['gpu'].split(','))
-        if gpu_number > 1:
-            self.device = ['/gpu:0', '/gpu:1', '/cpu:0']
-        else:
-            self.device = ['/gpu:0', '/gpu:0', '/cpu:0']
 
         self.build_model()
 
@@ -71,7 +80,7 @@ class AdversarialNet:
             res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size*16, cardinality=self.cardinality*8,
                                     bottleneck_d=4, is_training=is_training, name='res_5', padding='same',
                                     use_bias=False, dilation=4)
-            # fusion scheme
+            # Todo: fusion scheme
             fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
                                   is_training=is_training, name='fuse_1')
             concat_1 = res_5 + fuse_1
@@ -104,25 +113,24 @@ class AdversarialNet:
                                      bottleneck_d=4, is_training=is_training,
                                      name='res_10', padding='same', use_bias=False,
                                      dilation=1, residual=False)
-            feature = res_10
             # predicted probability
-            predicted_prob = conv3d(inputs=feature, output_channels=self.output_class, kernel_size=1,
-                                    stride=1, use_bias=True, name='predicted_prob')
+            predicted_feature = conv3d(inputs=res_10, output_channels=self.output_class, kernel_size=1,
+                                    stride=1, use_bias=True, name='predicted_feature')
             '''auxiliary prediction'''
-            auxiliary3_prob_2x = conv3d(inputs=res_5, output_channels=self.output_class, kernel_size=1,
-                                        stride=1, use_bias=True, name='auxiliary3_prob_2x')
-            auxiliary3_prob_1x = deconv3d(inputs=auxiliary3_prob_2x, output_channels=self.output_class,
-                                          name='auxiliary3_prob_1x')
+            auxiliary3_feature_2x = conv3d(inputs=res_5, output_channels=self.output_class, kernel_size=1,
+                                        stride=1, use_bias=True, name='auxiliary3_feature_2x')
+            auxiliary3_feature_1x = deconv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
+                                          name='auxiliary3_feature_1x')
 
-            auxiliary2_prob_2x = conv3d(inputs=res_6, output_channels=self.output_class, kernel_size=1,
-                                        stride=1, use_bias=True, name='auxiliary2_prob_2x')
-            auxiliary2_prob_1x = deconv3d(inputs=auxiliary2_prob_2x, output_channels=self.output_class,
-                                          name='auxiliary2_prob_1x')
+            auxiliary2_feature_2x = conv3d(inputs=res_6, output_channels=self.output_class, kernel_size=1,
+                                        stride=1, use_bias=True, name='auxiliary2_feature_2x')
+            auxiliary2_feature_1x = deconv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
+                                          name='auxiliary2_feature_1x')
 
-            auxiliary1_prob_2x = conv3d(inputs=res_8, output_channels=self.output_class, kernel_size=1,
-                                        stride=1, use_bias=True, name='auxiliary1_prob_2x')
-            auxiliary1_prob_1x = deconv3d(inputs=auxiliary1_prob_2x, output_channels=self.output_class,
-                                          name='auxiliary1_prob_1x')
+            auxiliary1_feature_2x = conv3d(inputs=res_8, output_channels=self.output_class, kernel_size=1,
+                                        stride=1, use_bias=True, name='auxiliary1_feature_2x')
+            auxiliary1_feature_1x = deconv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
+                                          name='auxiliary1_feature_1x')
 
         with tf.device(device_name_or_function=self.device[1]):
             # discriminator
@@ -165,21 +173,22 @@ class AdversarialNet:
                                          dilation=1, residual=True, stride=2)
             compress_7 = conv_bn_relu(inputs=compress_6, output_channels=self.feature_size*4, kernel_size=1, stride=1,
                                       is_training=is_training, name='compress_7', use_bias=True)
-            domain = tf.contrib.layers.fully_connected(
-                inputs=compress_7, num_outputs=2, scope='domain',
-                weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005)
-            )
+            # Todo: average pooling?
+            average = tf.reduce_mean(input_tensor=compress_7, axis=[1, 2, 3], name='average_pooling')
+            domain_feature = tf.contrib.layers.fully_connected(
+                inputs=average, num_outputs=2, scope='domain',
+                weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
 
         # device: cpu0
         with tf.device(device_name_or_function=self.device[2]):
-            softmax_prob = tf.nn.softmax(logits=predicted_prob, name='softmax_prob')
+            softmax_prob = tf.nn.softmax(logits=predicted_feature, name='softmax_prob')
             predicted_label = tf.argmax(input=softmax_prob, axis=4, name='predicted_label')
 
-            domain_prob = tf.nn.softmax(logits=domain, name='domain_prob')
+            domain_prob = tf.nn.softmax(logits=domain_feature, name='domain_prob')
             predicted_domain = tf.argmax(input=domain_prob, axis=0, name='predicted_domain')
 
-        return predicted_prob, predicted_label, auxiliary1_prob_1x, auxiliary2_prob_1x, auxiliary3_prob_1x, \
-            domain, predicted_domain
+        return predicted_feature, predicted_label, auxiliary1_feature_1x, auxiliary2_feature_1x, \
+            auxiliary3_feature_1x, domain_feature, predicted_domain
 
     def build_model(self):
         self.inputs = tf.placeholder(dtype=tf.float32,
@@ -188,13 +197,40 @@ class AdversarialNet:
         self.label = tf.placeholder(dtype=tf.int32, shape=[self.batch_size, self.input_size,
                                                            self.input_size, self.input_size],
                                     name='label')
-        self.predicted_prob, self.predicted_label, self.auxiliary1_prob_1x, self.auxiliary2_prob_1x, \
-            self.auxiliary3_prob_1x, self.domain, self.predicted_domain = self.model(self.inputs)
-        '''loss'''
+        self.domain_label = tf.placeholder(dtype=tf.int32, shape=[self.batch_size], name='domain_label')
+
+        self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
+            self.auxiliary3_feature_1x, self.domain_feature, self.predicted_domain = self.model(self.inputs)
+
+        self.main_loss = cross_entropy_loss(self.predicted_feature, self.label, self.output_class) + \
+            self.dice_ratio * dice_loss(self.predicted_feature, self.label, self.output_class)
+        self.auxiliary1_loss = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class) + \
+            self.dice_ratio * dice_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
+        self.auxiliary2_loss = cross_entropy_loss(self.auxiliary2_feature_1x, self.label, self.output_class) + \
+            self.dice_ratio * dice_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
+        self.auxiliary3_loss = cross_entropy_loss(self.auxiliary3_feature_1x, self.label, self.output_class) + \
+            self.dice_ratio * dice_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+
+        self.seg_loss = (self.main_loss + 0.8 * self.auxiliary1_loss + 0.4 * self.auxiliary2_loss +
+                         0.2 * self.auxiliary3_loss) / 2.4
+        self.adv_loss = domain_loss(self.domain_feature, self.domain_label, 2)
+        self.loss = self.seg_loss - self.domain_ratio * self.adv_loss
+
+        self.saver = tf.train.Saver(max_to_keep=20)
         print('Model built.')
 
     def train(self):
+        # sample selection
+        # epoch
         pass
 
     def test(self):
+        # write function for testing
+        # split
+        pass
+
+    def save_checkpoint(self):
+        pass
+
+    def load_checkpoint(self):
         pass
