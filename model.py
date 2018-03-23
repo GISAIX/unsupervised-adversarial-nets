@@ -16,6 +16,8 @@ class AdversarialNet:
         self.dice_ratio = 0.1
         self.domain_ratio = None
         self.saver = None
+        self.seg_variables = None
+        self.adv_variables = None
         self.trainable_variables = None
         self.inputs = None
         self.label = None
@@ -61,7 +63,7 @@ class AdversarialNet:
         self.phase = parameter['phase']
         self.augmentation = parameter['augmentation']
         self.select_samples = parameter['select_samples']
-        self.epoch = self.parameter['epoch']
+        self.iteration = self.parameter['iteration']
         # Todo: pay attention to priority of sample selection
 
         self.build_model()
@@ -202,9 +204,15 @@ class AdversarialNet:
         self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
             self.auxiliary3_feature_1x, self.domain_feature, self.predicted_domain = self.model(self.inputs)
 
-        self.slice = [i for i in range(self.domain_label.shape[0])
-                      if self.domain_label[i] == tf.constant(0, dtype=tf.int32)]
-        self.predicted_feature = self.predicted_feature[self.slice]
+        '''problem'''
+        # tensor = tf.equal(self.domain_label[0], tf.constant(0, dtype=tf.int32))
+        # self.slice = [i for i in range(self.domain_label.shape[0])
+        #               if True]
+        # print(tensor)
+        # print(self.slice)
+        # self.predicted_feature = self.predicted_feature[self.slice]
+        # Todo: check whether it is working
+        '''problem'''
 
         self.main_closs = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_closs = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
@@ -224,19 +232,22 @@ class AdversarialNet:
         self.mix_loss = self.seg_loss - self.domain_ratio * self.adv_loss
 
         self.trainable_variables = tf.trainable_variables()
+        self.seg_variables = tf.trainable_variables(scope='seg')
+        self.adv_variables = tf.trainable_variables(scope='adv')
         self.saver = tf.train.Saver(max_to_keep=20)
         print('Model built.')
 
     def train(self):
-        learning_rate = self.parameter['learning_rate']
-        beta1 = self.parameter['beta1']
+        learning_rate_adv = self.parameter['learning_rate_adv']
+        beta1_adv = self.parameter['beta1_adv']
+        learning_rate_seg = self.parameter['learning_rate_seg']
+        beta1_seg = self.parameter['beta1_seg']
 
         # dynamics problem -> placeholder
-        adv_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(
-            self.adv_loss, var_list=self.trainable_variables)
-        mix_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(
-            self.mix_loss, var_list=self.trainable_variables)
-        # print(self.trainable_variables)
+        adv_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_adv, beta1=beta1_adv).minimize(
+            self.adv_loss, var_list=self.adv_variables)
+        mix_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_seg, beta1=beta1_seg).minimize(
+            self.mix_loss, var_list=self.seg_variables)
 
         self.session.run(tf.global_variables_initializer())
 
@@ -269,43 +280,53 @@ class AdversarialNet:
             loss_log.write(write_json(self.parameter))
             loss_log.write('\n')
 
-            for epoch in range(self.epoch):
-                domain_ratio = np.array([0.1], dtype=np.float32)
-                condition1 = True
-                condition2 = True
+            for iteration in range(self.iteration):
+                domain_ratio = self.compute_domain_ratio(iteration)
+                seg_only = True
+                adv_only = True
                 # Todo: template
-                if condition1:
+                if seg_only:
                     self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
-                                    mix_optimizer, domain_ratio, loss_log, epoch)
-                elif condition2:
-                    self.train_task(mix_image_filelist, mix_image_filelist, mix_image_filelist,
-                                    adv_optimizer, domain_ratio, loss_log, epoch)
+                                    mix_optimizer, domain_ratio, loss_log, iteration)
+                if adv_only:
+                    self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
+                                    adv_optimizer, domain_ratio, loss_log, iteration)
                 # save and test module
-                if np.mod(epoch + 1, self.parameter['save_interval']) == 0:
+                if np.mod(iteration + 1, self.parameter['save_interval']) == 0:
                     self.save_checkpoint(self.parameter['checkpoint_dir'],
-                                         self.parameter['model_name'], global_step=epoch + 1)
-                    print('[Save] Model saved with epoch %d' % (epoch + 1))
-                if np.mod(epoch + 1, self.parameter['test_interval']) == 0:
+                                         self.parameter['model_name'], global_step=iteration + 1)
+                    print('[Save] Model saved with iteration %d' % (iteration + 1))
+                if np.mod(iteration + 1, self.parameter['test_interval']) == 0:
                     pass
-        pass
+
+    def compute_domain_ratio(self, iteration):
+        independent_iter = 10000
+        max_ratio = 0.05
+        if iteration < independent_iter:
+            domain_ratio = 0.0
+        else:
+            domain_ratio = max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
+        return np.array([domain_ratio], dtype=np.float32)
 
     def train_task(self, train_image_filelist, train_label_filelist, train_domain_info,
-                   optimizer, domain_ratio, loss_log, epoch):
+                   optimizer, domain_ratio, loss_log, iteration):
         start_time = time.time()
         image_batch, label_batch, domain_batch = load_train_batches(
             train_image_filelist, train_label_filelist, train_domain_info, self.input_size,
             self.batch_size, flipping=self.augmentation, rotation=self.augmentation, scale=self.scale)
         # update network
 
-        _, seg_loss, adv_loss, mix_loss = self.session.run(
-            [optimizer, self.seg_loss, self.adv_loss, self.mix_loss],
+        _, mix_loss, adv_loss, seg_loss, seg_closs, seg_dloss = self.session.run(
+            [optimizer, self.mix_loss, self.adv_loss, self.seg_loss, self.seg_closs, self.seg_dloss],
             feed_dict={self.inputs: image_batch, self.label: label_batch,
                        self.domain_label: domain_batch, self.domain_ratio: domain_ratio})
 
         '''temp'''
         string_format = f'[label] {str(np.unique(label_batch))} \n'
-        string_format += '[Epoch] %d, time: %4.4f [Loss] loss: %.8f \n[Loss] seg_loss: %.8f, adv_loss: %.8f \n\n' \
-                         % (epoch + 1, time.time() - start_time, mix_loss, seg_loss, adv_loss)
+        string_format += '[Iteration] %d time: %4.4f [Loss] mix_loss: %.8f adv_loss: %.8f seg_loss: %.8f \n' \
+                         'seg_closs: %.8f seg_dloss: %.8f \n\n' \
+                         % (iteration + 1, time.time() - start_time, mix_loss, adv_loss, seg_loss,
+                            seg_closs, seg_dloss)
         loss_log.write(string_format)
         print(string_format, end='')
 
