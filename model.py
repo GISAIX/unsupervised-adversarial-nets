@@ -205,11 +205,10 @@ class AdversarialNet:
             self.auxiliary3_feature_1x, self.domain_feature, self.predicted_domain = self.model(self.inputs)
 
         '''problem'''
-        # tensor = tf.equal(self.domain_label[0], tf.constant(0, dtype=tf.int32))
-        # self.slice = [i for i in range(self.domain_label.shape[0])
-        #               if True]
-        # print(tensor)
-        # print(self.slice)
+        tensor = tf.equal(self.domain_label[0], tf.constant(0, dtype=tf.int32))
+        self.slice = [i for i in range(self.domain_label.shape[0]) if True]
+        print(tensor)
+        print(self.slice)
         # self.predicted_feature = self.predicted_feature[self.slice]
         # Todo: check whether it is working
         '''problem'''
