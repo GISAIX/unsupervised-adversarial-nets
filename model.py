@@ -299,7 +299,7 @@ class AdversarialNet:
         start_time = time.time()
         image_batch, label_batch, domain_batch = load_train_batches(
             train_image_filelist, train_label_filelist, train_domain_info, self.input_size,
-            self.batch_size, flipping=True, rotation=True, scale=self.scale)
+            self.batch_size, flipping=self.augmentation, rotation=self.augmentation, scale=self.scale)
         # update network
 
         _, seg_loss, adv_loss, mix_loss = self.session.run(
@@ -309,7 +309,7 @@ class AdversarialNet:
 
         '''temp'''
         string_format = f'[label] {str(np.unique(label_batch))} \n'
-        string_format += '[Epoch] %d, time: %4.4f [Loss] loss: %.8f \n [Loss] seg_loss: %.8f, adv_loss: %.8f \n\n' \
+        string_format += '[Epoch] %d, time: %4.4f [Loss] loss: %.8f \n[Loss] seg_loss: %.8f, adv_loss: %.8f \n\n' \
                          % (epoch + 1, time.time() - start_time, mix_loss, seg_loss, adv_loss)
         loss_log.write(string_format)
         print(string_format, end='')

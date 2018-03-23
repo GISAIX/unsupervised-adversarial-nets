@@ -7,21 +7,21 @@ def init_parameter(name):
     parameter['input_size'] = 64
     parameter['input_channels'] = 1
     parameter['output_size'] = parameter['input_size']
-    parameter['output_class'] = 3
+    parameter['output_class'] = 8
     # learning strategy
     parameter['learning_rate'] = 0.01
     parameter['beta1'] = 0.5
     parameter['epoch'] = 35000
     # data location
-    parameter['source_data_dir'] = f'../hvsmr/crop/data/'
-    parameter['source_label_dir'] = f'../hvsmr/crop/label/'
-    parameter['target_data_dir'] = f'../hvsmr/crop/data/'
-    parameter['target_label_dir'] = f'../hvsmr/crop/label/'
-    parameter['test_data_dir'] = f'../hvsmr/crop/data/'
-    parameter['predict_label_dir'] = f'../hvsmr/crop/predict/'
+    parameter['source_data_dir'] = '../MM-WHS/ct_train1'
+    parameter['source_label_dir'] = '../MM-WHS/ct_train1'
+    parameter['target_data_dir'] = '../MM-WHS/ct_train2'
+    parameter['target_label_dir'] = '../MM-WHS/ct_train2'
+    parameter['test_data_dir'] = '../MM-WHS/ct_test1'
+    parameter['predict_label_dir'] = '../MM-WHS/ct_test1/prediction/'
     # model configuration
     parameter['name'] = name
-    parameter['model_name'] = f'hvsmr_crop_{name}.model'
+    parameter['model_name'] = f'mm-whs_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
     parameter['scale'] = 1
     parameter['test_stride'] = 32  # for overlap

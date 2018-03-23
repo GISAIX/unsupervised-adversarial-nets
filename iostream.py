@@ -13,6 +13,9 @@ def load_image(image_path, label_path, scale=1):
     mean_num = np.mean(image)
     deviation_num = np.std(image)
     image = (image - mean_num) / (deviation_num + 1e-5)
+    # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
+    mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
+    label = np.vectorize(mapping.get)(label)
     # check shape
     if image.shape != label.shape:
         print('Image and label shapes mismatch!')
@@ -134,8 +137,8 @@ def load_all_images(image_filelist, label_filelist, scale=1):
 
 
 def generate_filelist(image_dir, label_dir):
-    image_filelist = glob(pathname='{}/*.nii.gz'.format(image_dir))
-    label_filelist = glob(pathname='{}/*.nii.gz'.format(label_dir))
+    image_filelist = glob(pathname='{}/*image.nii.gz'.format(image_dir))
+    label_filelist = glob(pathname='{}/*label.nii.gz'.format(label_dir))
     image_filelist.sort()
     label_filelist.sort()
     return image_filelist, label_filelist

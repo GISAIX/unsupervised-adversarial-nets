@@ -20,10 +20,10 @@ def conv_bn_relu(inputs, output_channels, kernel_size, stride, is_training, name
     with tf.variable_scope(name_or_scope=name):
         conv = conv3d(inputs, output_channels, kernel_size, stride, padding=padding,
                       use_bias=use_bias, name=name+'_conv', dilation=dilation)
-        bn = tf.contrib.layers.batch_norm(
-            inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
-            updates_collections=None, is_training=is_training, scope=name+'_batch_norm')
-        relu = tf.nn.relu(features=bn, name=name+'_relu')
+        # bn = tf.contrib.layers.batch_norm(
+        #     inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
+        #     updates_collections=None, is_training=is_training, scope=name+'_batch_norm')
+        relu = tf.nn.relu(features=conv, name=name+'_relu')
     return relu
 
 
@@ -55,10 +55,10 @@ def transition_layer(inputs, output_channels, is_training, name, padding='same',
     with tf.variable_scope(name_or_scope=name):
         conv = conv3d(inputs, output_channels, kernel_size=1, stride=1, padding=padding,
                       use_bias=use_bias, name=name+'_iii_conv', dilation=dilation)
-        bn = tf.contrib.layers.batch_norm(
-            inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
-            updates_collections=None, is_training=is_training, scope=name+'_iii_batch_norm')
-        return bn
+        # bn = tf.contrib.layers.batch_norm(
+        #     inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
+        #     updates_collections=None, is_training=is_training, scope=name+'_iii_batch_norm')
+        return conv
 
 
 def aggregated_conv(inputs, output_channels, cardinality, bottleneck_d, is_training,
@@ -97,8 +97,8 @@ def deconv3d(inputs, output_channels, name='deconv'):
 def deconv_bn_relu(inputs, output_channels, is_training, name):
     with tf.variable_scope(name):
         deconv = deconv3d(inputs=inputs, output_channels=output_channels, name=name+'_deconv')
-        bn = tf.contrib.layers.batch_norm(inputs=deconv, decay=0.9, scale=True, epsilon=1e-5,
-                                          updates_collections=None, is_training=is_training,
-                                          scope=name+'_batch_norm')
-        relu = tf.nn.relu(features=bn, name=name+'_relu')
+        # bn = tf.contrib.layers.batch_norm(inputs=deconv, decay=0.9, scale=True, epsilon=1e-5,
+        #                                   updates_collections=None, is_training=is_training,
+        #                                   scope=name+'_batch_norm')
+        relu = tf.nn.relu(features=deconv, name=name+'_relu')
     return relu
