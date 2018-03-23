@@ -51,22 +51,21 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         label_crop = label[crop_position[0]:crop_position[0] + input_size,
                            crop_position[1]:crop_position[1] + input_size,
                            crop_position[2]:crop_position[2] + input_size]
-        '''
+
         # throw away part of defected training data?
         label_set = set(np.unique(label_crop))
-        if label_set == {0} and np.random.randint(100) >= 0:
-            # print('*', end='')
+        if label_set == {0}:
             continue
         elif len(label_set) == 2 and np.random.randint(100) >= 50:
-            # print('!', end='')
+            print('!', end='')
             continue
         else:
             pass_flag = True
-        '''
+
         image_crop = image[crop_position[0]:crop_position[0] + input_size,
                            crop_position[1]:crop_position[1] + input_size,
                            crop_position[2]:crop_position[2] + input_size]
-        pass_flag = True
+        # Todo: label mapping may perform here
 
     # rotation and flipping
     if np.random.random() > 0.333:

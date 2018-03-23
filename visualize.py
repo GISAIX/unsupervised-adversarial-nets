@@ -34,7 +34,7 @@ def slice_visualize(image):
 
 
 def visualize():
-    location = '../MM-WHS/mr_train/'
+    location = '../MM-WHS/ct_train1/'
     image_filelist, label_filelist = extract_path(location)
     for i in range(len(image_filelist)):
         img, gt = extract_image(image_filelist[i], label_filelist[i])

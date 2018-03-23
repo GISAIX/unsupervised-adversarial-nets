@@ -13,11 +13,11 @@ def init_parameter(name):
     parameter['beta1'] = 0.5
     parameter['epoch'] = 35000
     # data location
-    parameter['source_data_dir'] = '../MM-WHS/ct_train1'
-    parameter['source_label_dir'] = '../MM-WHS/ct_train1'
-    parameter['target_data_dir'] = '../MM-WHS/ct_train2'
-    parameter['target_label_dir'] = '../MM-WHS/ct_train2'
-    parameter['test_data_dir'] = '../MM-WHS/ct_test1'
+    parameter['source_data_dir'] = '../MM-WHS/ct_train1/'
+    parameter['source_label_dir'] = '../MM-WHS/ct_train1/'
+    parameter['target_data_dir'] = '../MM-WHS/ct_train2/'
+    parameter['target_label_dir'] = '../MM-WHS/ct_train2/'
+    parameter['test_data_dir'] = '../MM-WHS/ct_test1/'
     parameter['predict_label_dir'] = '../MM-WHS/ct_test1/prediction/'
     # model configuration
     parameter['name'] = name

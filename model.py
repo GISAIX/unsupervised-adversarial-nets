@@ -27,10 +27,16 @@ class AdversarialNet:
         self.auxiliary1_feature_1x = None
         self.auxiliary2_feature_1x = None
         self.auxiliary3_feature_1x = None
-        self.main_loss = None
-        self.auxiliary1_loss = None
-        self.auxiliary2_loss = None
-        self.auxiliary3_loss = None
+        self.main_closs = None
+        self.auxiliary1_closs = None
+        self.auxiliary2_closs = None
+        self.auxiliary3_closs = None
+        self.seg_closs = None
+        self.main_dloss = None
+        self.auxiliary1_dloss = None
+        self.auxiliary2_dloss = None
+        self.auxiliary3_dloss = None
+        self.seg_dloss = None
         self.seg_loss = None
         self.adv_loss = None
         self.mix_loss = None
@@ -64,123 +70,113 @@ class AdversarialNet:
         is_training = (self.phase == 'train')
 
         with tf.device(device_name_or_function=self.device[0]):
-            conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=3,
-                                  stride=1, is_training=is_training, name='conv_1')
-            res_1 = aggregated_conv(inputs=conv_1, output_channels=self.feature_size*2, cardinality=self.cardinality,
-                                    bottleneck_d=4, is_training=is_training, name='res_1', padding='same',
-                                    use_bias=False, dilation=1)
-            pool1 = tf.layers.max_pooling3d(inputs=res_1, pool_size=2, strides=2, name='pool1')
-            # pool size?
-            res_2 = aggregated_conv(inputs=pool1, output_channels=self.feature_size*4, cardinality=self.cardinality*2,
-                                    bottleneck_d=4, is_training=is_training, name='res_2', padding='same',
-                                    use_bias=False, dilation=1)
-            res_3 = aggregated_conv(inputs=res_2, output_channels=self.feature_size*8, cardinality=self.cardinality*4,
-                                    bottleneck_d=4, is_training=is_training, name='res_3', padding='same',
-                                    use_bias=False, dilation=2)
-            res_4 = aggregated_conv(inputs=res_3, output_channels=self.feature_size*16, cardinality=self.cardinality*8,
-                                    bottleneck_d=4, is_training=is_training, name='res_4', padding='same',
-                                    use_bias=False, dilation=2)
-            res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size*16, cardinality=self.cardinality*8,
-                                    bottleneck_d=4, is_training=is_training, name='res_5', padding='same',
-                                    use_bias=False, dilation=4)
-            # Todo: fusion scheme
-            fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
-                                  is_training=is_training, name='fuse_1')
-            concat_1 = res_5 + fuse_1
-            res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
-                                    cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
-                                    name='res_6', padding='same', use_bias=False,
-                                    dilation=2, residual=True)
-            fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
-                                  is_training=is_training, name='fuse_2')
-            concat_2 = res_6 + fuse_2
-            res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
-                                    cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
-                                    name='res_7', padding='same', use_bias=False,
-                                    dilation=2, residual=True)
-            res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
-                                    cardinality=self.cardinality * 2,
-                                    bottleneck_d=4, is_training=is_training,
-                                    name='res_8', padding='same', use_bias=False,
-                                    dilation=1, residual=False)
-            deconv1 = deconv_bn_relu(inputs=res_8, output_channels=self.feature_size * 2, is_training=is_training,
-                                     name='deconv1')
-            fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
-                                  is_training=is_training, name='fuse_3')
-            concat_3 = deconv1 + fuse_3
-            res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size, cardinality=self.cardinality,
-                                    bottleneck_d=4, is_training=is_training,
-                                    name='res_9', padding='same', use_bias=False,
-                                    dilation=1, residual=False)
-            res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size, cardinality=self.cardinality,
-                                     bottleneck_d=4, is_training=is_training,
-                                     name='res_10', padding='same', use_bias=False,
-                                     dilation=1, residual=False)
-            # predicted probability
-            predicted_feature = conv3d(inputs=res_10, output_channels=self.output_class, kernel_size=1,
-                                       stride=1, use_bias=True, name='predicted_feature')
-            '''auxiliary prediction'''
-            auxiliary3_feature_2x = conv3d(inputs=res_5, output_channels=self.output_class, kernel_size=1,
-                                           stride=1, use_bias=True, name='auxiliary3_feature_2x')
-            auxiliary3_feature_1x = deconv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
-                                             name='auxiliary3_feature_1x')
+            with tf.variable_scope('seg'):
+                conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=3, stride=1,
+                                      is_training=is_training, name='conv_1')
+                res_1 = aggregated_conv(inputs=conv_1, output_channels=self.feature_size * 2,
+                                        cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
+                                        name='res_1', padding='same', use_bias=False, dilation=1)
+                pool1 = tf.layers.max_pooling3d(inputs=res_1, pool_size=2, strides=2, name='pool1')
+                # pool size?
+                res_2 = aggregated_conv(inputs=pool1, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
+                                        name='res_2', padding='same', use_bias=False, dilation=1)
+                res_3 = aggregated_conv(inputs=res_2, output_channels=self.feature_size * 8,
+                                        cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
+                                        name='res_3', padding='same', use_bias=False, dilation=2)
+                res_4 = aggregated_conv(inputs=res_3, output_channels=self.feature_size * 16,
+                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                        name='res_4', padding='same', use_bias=False, dilation=2)
+                res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
+                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                        name='res_5', padding='same', use_bias=False, dilation=4)
+                # Todo: fusion scheme
+                fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
+                                      is_training=is_training, name='fuse_1')
+                concat_1 = res_5 + fuse_1
+                res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
+                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                        name='res_6', padding='same', use_bias=False, dilation=2, residual=True)
+                fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
+                                      is_training=is_training, name='fuse_2')
+                concat_2 = res_6 + fuse_2
+                res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
+                                        name='res_7', padding='same', use_bias=False, dilation=2, residual=True)
+                res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
+                                        name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
+                deconv1 = deconv_bn_relu(inputs=res_8, output_channels=self.feature_size * 2, is_training=is_training,
+                                         name='deconv1')
+                fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
+                                      is_training=is_training, name='fuse_3')
+                concat_3 = deconv1 + fuse_3
+                res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
+                                        cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
+                                        name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
+                res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size, cardinality=self.cardinality,
+                                         bottleneck_d=4, is_training=is_training, name='res_10', padding='same',
+                                         use_bias=False, dilation=1, residual=False)
+                # predicted probability
+                predicted_feature = conv3d(inputs=res_10, output_channels=self.output_class, kernel_size=1, stride=1,
+                                           use_bias=True, name='predicted_feature')
+                '''auxiliary prediction'''
+                auxiliary3_feature_2x = conv3d(inputs=res_5, output_channels=self.output_class, kernel_size=1, stride=1,
+                                               use_bias=True, name='auxiliary3_feature_2x')
+                auxiliary3_feature_1x = deconv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
+                                                 name='auxiliary3_feature_1x')
 
-            auxiliary2_feature_2x = conv3d(inputs=res_6, output_channels=self.output_class, kernel_size=1,
-                                           stride=1, use_bias=True, name='auxiliary2_feature_2x')
-            auxiliary2_feature_1x = deconv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
-                                             name='auxiliary2_feature_1x')
+                auxiliary2_feature_2x = conv3d(inputs=res_6, output_channels=self.output_class, kernel_size=1, stride=1,
+                                               use_bias=True, name='auxiliary2_feature_2x')
+                auxiliary2_feature_1x = deconv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
+                                                 name='auxiliary2_feature_1x')
 
-            auxiliary1_feature_2x = conv3d(inputs=res_8, output_channels=self.output_class, kernel_size=1,
-                                           stride=1, use_bias=True, name='auxiliary1_feature_2x')
-            auxiliary1_feature_1x = deconv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
-                                             name='auxiliary1_feature_1x')
+                auxiliary1_feature_2x = conv3d(inputs=res_8, output_channels=self.output_class, kernel_size=1, stride=1,
+                                               use_bias=True, name='auxiliary1_feature_2x')
+                auxiliary1_feature_1x = deconv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
+                                                 name='auxiliary1_feature_1x')
 
         with tf.device(device_name_or_function=self.device[1]):
-            # discriminator
-            concat_dimension = 4  # channels_last
-            normal_1 = tf.concat([res_1, res_10], axis=concat_dimension, name='normal_1')
-            compress_1 = tf.concat([res_3, res_5, res_8], axis=concat_dimension, name='compress_1')
+            with tf.variable_scope('adv'):
+                # discriminator
+                concat_dimension = 4  # channels_last
+                normal_1 = tf.concat([res_1, res_10], axis=concat_dimension, name='normal_1')
+                compress_1 = tf.concat([res_3, res_5, res_8], axis=concat_dimension, name='compress_1')
 
-            normal_2 = aggregated_conv(inputs=normal_1, output_channels=self.feature_size*8,
-                                       cardinality=self.cardinality*8,
-                                       bottleneck_d=4, is_training=is_training,
-                                       name='normal_2', padding='same', use_bias=False,
-                                       dilation=1, residual=True, stride=2)
+                normal_2 = aggregated_conv(inputs=normal_1, output_channels=self.feature_size * 8,
+                                           cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                           name='normal_2', padding='same', use_bias=False, dilation=1, residual=True,
+                                           stride=2)
 
-            compress_2 = aggregated_conv(inputs=compress_1, output_channels=self.feature_size*8,
-                                         cardinality=self.cardinality*8,
-                                         bottleneck_d=4, is_training=is_training,
-                                         name='compress_2', padding='same', use_bias=False,
-                                         dilation=1, residual=True)
+                compress_2 = aggregated_conv(inputs=compress_1, output_channels=self.feature_size * 8,
+                                             cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                             name='compress_2', padding='same', use_bias=False, dilation=1,
+                                             residual=True)
 
-            concat_4 = tf.concat([normal_2, compress_2], axis=concat_dimension, name='concat_4')
-            compress_3 = aggregated_conv(inputs=concat_4, output_channels=self.feature_size*8,
-                                         cardinality=self.cardinality*8,
-                                         bottleneck_d=4, is_training=is_training,
-                                         name='compress_3', padding='same', use_bias=False,
-                                         dilation=1, residual=True)
-            compress_4 = aggregated_conv(inputs=compress_3, output_channels=self.feature_size*16,
-                                         cardinality=self.cardinality*8,
-                                         bottleneck_d=4, is_training=is_training,
-                                         name='compress_4', padding='same', use_bias=False,
-                                         dilation=1, residual=True, stride=2)
-            compress_5 = aggregated_conv(inputs=compress_4, output_channels=self.feature_size*8,
-                                         cardinality=self.cardinality*8,
-                                         bottleneck_d=4, is_training=is_training,
-                                         name='compress_5', padding='same', use_bias=False,
-                                         dilation=1, residual=True, stride=2)
-            compress_6 = aggregated_conv(inputs=compress_5, output_channels=self.feature_size*4,
-                                         cardinality=self.cardinality*4,
-                                         bottleneck_d=4, is_training=is_training,
-                                         name='compress_6', padding='same', use_bias=False,
-                                         dilation=1, residual=True, stride=2)
-            compress_7 = conv_bn_relu(inputs=compress_6, output_channels=self.feature_size*4, kernel_size=1, stride=1,
-                                      is_training=is_training, name='compress_7', use_bias=True)
-            # Todo: average pooling?
-            average = tf.reduce_mean(input_tensor=compress_7, axis=[1, 2, 3], name='average_pooling')
-            domain_feature = tf.contrib.layers.fully_connected(
-                inputs=average, num_outputs=2, scope='domain',
-                weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
+                concat_4 = tf.concat([normal_2, compress_2], axis=concat_dimension, name='concat_4')
+                compress_3 = aggregated_conv(inputs=concat_4, output_channels=self.feature_size * 8,
+                                             cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                             name='compress_3', padding='same', use_bias=False, dilation=1,
+                                             residual=True)
+                compress_4 = aggregated_conv(inputs=compress_3, output_channels=self.feature_size * 16,
+                                             cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                             name='compress_4', padding='same', use_bias=False, dilation=1,
+                                             residual=True, stride=2)
+                compress_5 = aggregated_conv(inputs=compress_4, output_channels=self.feature_size * 8,
+                                             cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                             name='compress_5', padding='same', use_bias=False, dilation=1,
+                                             residual=True, stride=2)
+                compress_6 = aggregated_conv(inputs=compress_5, output_channels=self.feature_size * 4,
+                                             cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
+                                             name='compress_6', padding='same', use_bias=False, dilation=1,
+                                             residual=True, stride=2)
+                compress_7 = conv_bn_relu(inputs=compress_6, output_channels=self.feature_size * 4, kernel_size=1,
+                                          stride=1, is_training=is_training, name='compress_7', use_bias=True)
+                # Todo: average pooling?
+                average = tf.reduce_mean(input_tensor=compress_7, axis=[1, 2, 3], name='average_pooling')
+                domain_feature = tf.contrib.layers.fully_connected(inputs=average, num_outputs=2, scope='domain',
+                                                                   weights_regularizer=tf.contrib.slim.l2_regularizer(
+                                                                       scale=0.0005))
 
         # device: cpu0
         with tf.device(device_name_or_function=self.device[2]):
@@ -210,17 +206,20 @@ class AdversarialNet:
                       if self.domain_label[i] == tf.constant(0, dtype=tf.int32)]
         self.predicted_feature = self.predicted_feature[self.slice]
 
-        self.main_loss = cross_entropy_loss(self.predicted_feature, self.label, self.output_class) + \
-            self.dice_ratio * dice_loss(self.predicted_feature, self.label, self.output_class)
-        self.auxiliary1_loss = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class) + \
-            self.dice_ratio * dice_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
-        self.auxiliary2_loss = cross_entropy_loss(self.auxiliary2_feature_1x, self.label, self.output_class) + \
-            self.dice_ratio * dice_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
-        self.auxiliary3_loss = cross_entropy_loss(self.auxiliary3_feature_1x, self.label, self.output_class) + \
-            self.dice_ratio * dice_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+        self.main_closs = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
+        self.auxiliary1_closs = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
+        self.auxiliary2_closs = cross_entropy_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
+        self.auxiliary3_closs = cross_entropy_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+        self.seg_closs = (self.main_closs + 0.8 * self.auxiliary1_closs + 0.4 * self.auxiliary2_closs +
+                          0.2 * self.auxiliary3_closs) / 2.4
+        self.main_dloss = dice_loss(self.predicted_feature, self.label, self.output_class)
+        self.auxiliary1_dloss = dice_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
+        self.auxiliary2_dloss = dice_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
+        self.auxiliary3_dloss = dice_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+        self.seg_dloss = (self.main_dloss + 0.8 * self.auxiliary1_dloss + 0.4 * self.auxiliary2_dloss +
+                          0.2 * self.auxiliary3_dloss) / 2.4
+        self.seg_loss = self.seg_closs + self.dice_ratio * self.seg_dloss
 
-        self.seg_loss = (self.main_loss + 0.8 * self.auxiliary1_loss + 0.4 * self.auxiliary2_loss +
-                         0.2 * self.auxiliary3_loss) / 2.4
         self.adv_loss = domain_loss(self.domain_feature, self.domain_label, 2)
         self.mix_loss = self.seg_loss - self.domain_ratio * self.adv_loss
 
@@ -233,12 +232,11 @@ class AdversarialNet:
         beta1 = self.parameter['beta1']
 
         # dynamics problem -> placeholder
-        seg_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(
-            self.seg_loss, var_list=self.trainable_variables)
         adv_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(
             self.adv_loss, var_list=self.trainable_variables)
         mix_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=beta1).minimize(
             self.mix_loss, var_list=self.trainable_variables)
+        # print(self.trainable_variables)
 
         self.session.run(tf.global_variables_initializer())
 
@@ -280,9 +278,6 @@ class AdversarialNet:
                     self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
                                     mix_optimizer, domain_ratio, loss_log, epoch)
                 elif condition2:
-                    self.train_task(source_image_filelist, source_label_filelist, source_domain_info,
-                                    seg_optimizer, domain_ratio, loss_log, epoch)
-                else:
                     self.train_task(mix_image_filelist, mix_image_filelist, mix_image_filelist,
                                     adv_optimizer, domain_ratio, loss_log, epoch)
                 # save and test module
