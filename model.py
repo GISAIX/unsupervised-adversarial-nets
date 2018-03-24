@@ -140,7 +140,7 @@ class AdversarialNet:
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('adv'):
-                # discriminator
+                # discriminator todo: build resnet
                 concat_dimension = 4  # channels_last
                 normal_1 = tf.concat([res_1, res_10], axis=concat_dimension, name='normal_1')
                 compress_1 = tf.concat([res_3, res_5, res_8], axis=concat_dimension, name='compress_1')
