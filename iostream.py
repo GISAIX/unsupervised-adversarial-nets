@@ -54,7 +54,7 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
 
         # throw away part of defected training data?
         label_set = set(np.unique(label_crop))
-        if label_set == {0}:
+        if len(label_set) == 1:
             continue
         elif len(label_set) == 2 and np.random.randint(100) >= 50:
             print('!', end='')

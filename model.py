@@ -282,7 +282,7 @@ class AdversarialNet:
             for iteration in range(self.iteration):
                 domain_ratio = self.compute_domain_ratio(iteration)
                 seg_only = True
-                adv_only = True
+                adv_only = False
                 # Todo: template
                 if seg_only:
                     self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,

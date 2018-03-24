@@ -5,18 +5,16 @@ def dice_loss(prediction, label, class_num):
     # softmax processing
     prediction = tf.nn.softmax(logits=prediction)
     ground_truth = tf.one_hot(indices=label, depth=class_num)
-    dice = 0
-    for i in range(class_num):
+    loss = 0
+    for i in range(1, class_num):
         i_prediction = prediction[:, :, :, :, i]
         i_ground_truth = ground_truth[:, :, :, :, i]
         intersection = tf.reduce_sum(i_prediction * i_ground_truth)
-        union_prediction = tf.reduce_sum(i_prediction * i_prediction)
-        union_ground_truth = tf.reduce_sum(i_ground_truth * i_ground_truth)
-        union = union_ground_truth + union_prediction
+        union = tf.reduce_sum(i_prediction * i_prediction) + tf.reduce_sum(i_ground_truth * i_ground_truth)
         # adjusted weight
         weight = tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
-        dice += (1 - 2 * intersection / union) * (1 - weight) / (class_num - 1)
-    return dice
+        loss += (1 - 2 * intersection / union) * (1 - weight) / (class_num - 1)
+    return loss
 
 
 def cross_entropy_loss(prediction, label, class_num):
@@ -25,7 +23,7 @@ def cross_entropy_loss(prediction, label, class_num):
     softmax_prediction = tf.nn.softmax(logits=prediction)
     ground_truth = tf.one_hot(indices=label, depth=class_num)
     loss = 0
-    ratio = 0
+    ratio = 1e-5
     for i in range(class_num):
         i_prediction = softmax_prediction[:, :, :, :, i]
         i_ground_truth = ground_truth[:, :, :, :, i]
