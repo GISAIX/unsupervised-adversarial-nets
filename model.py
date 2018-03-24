@@ -13,7 +13,7 @@ class AdversarialNet:
         self.parameter = parameter
 
         # variable declaration
-        self.dice_ratio = 0.1
+        self.dice_ratio = 0.5
         self.domain_ratio = None
         self.saver = None
         self.seg_variables = None
