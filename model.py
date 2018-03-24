@@ -204,14 +204,14 @@ class AdversarialNet:
         self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
             self.auxiliary3_feature_1x, self.domain_feature, self.predicted_domain = self.model(self.inputs)
 
-        '''problem'''
+        '''problem
         tensor = tf.equal(self.domain_label[0], tf.constant(0, dtype=tf.int32))
         self.slice = [i for i in range(self.domain_label.shape[0]) if True]
         print(tensor)
         print(self.slice)
         # self.predicted_feature = self.predicted_feature[self.slice]
         # Todo: check whether it is working
-        '''problem'''
+        problem'''
 
         self.main_closs = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_closs = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
@@ -281,15 +281,14 @@ class AdversarialNet:
 
             for iteration in range(self.iteration):
                 domain_ratio = self.compute_domain_ratio(iteration)
-                seg_only = True
-                adv_only = False
-                # Todo: template
+                adv_only = (iteration >= 100) and (iteration + 1) % 2 == 1
+                seg_only = not adv_only
                 if seg_only:
+                    self.train_task(source_image_filelist, source_label_filelist, source_domain_info,
+                                    mix_optimizer, domain_ratio, loss_log, iteration, phase='seg')
+                else:
                     self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
-                                    mix_optimizer, domain_ratio, loss_log, iteration)
-                if adv_only:
-                    self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
-                                    adv_optimizer, domain_ratio, loss_log, iteration)
+                                    adv_optimizer, domain_ratio, loss_log, iteration, phase='adv')
                 # save and test module
                 if np.mod(iteration + 1, self.parameter['save_interval']) == 0:
                     self.save_checkpoint(self.parameter['checkpoint_dir'],
@@ -308,7 +307,7 @@ class AdversarialNet:
         return np.array([domain_ratio], dtype=np.float32)
 
     def train_task(self, train_image_filelist, train_label_filelist, train_domain_info,
-                   optimizer, domain_ratio, loss_log, iteration):
+                   optimizer, domain_ratio, loss_log, iteration, phase):
         start_time = time.time()
         image_batch, label_batch, domain_batch = load_train_batches(
             train_image_filelist, train_label_filelist, train_domain_info, self.input_size,
@@ -321,7 +320,7 @@ class AdversarialNet:
                        self.domain_label: domain_batch, self.domain_ratio: domain_ratio})
 
         '''temp'''
-        string_format = f'[label] {str(np.unique(label_batch))} \n'
+        string_format = f'[label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} [Phase] {phase}\n'
         string_format += '[Iteration] %d time: %4.4f [Loss] mix_loss: %.8f adv_loss: %.8f seg_loss: %.8f \n' \
                          'seg_closs: %.8f seg_dloss: %.8f \n\n' \
                          % (iteration + 1, time.time() - start_time, mix_loss, adv_loss, seg_loss,
