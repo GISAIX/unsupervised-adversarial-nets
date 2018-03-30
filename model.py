@@ -1,5 +1,4 @@
 from conv import *
-from lossfun import *
 from iostream import *
 import os
 import numpy as np
@@ -13,7 +12,17 @@ class AdversarialNet:
         self.parameter = parameter
 
         # variable declaration
-
+        self.inputs = None
+        self.label = None
+        self.trainable_variables = None
+        self.gen_variables = None
+        self.dis_variables = None
+        self.saver = None
+        self.coefficient = None
+        self.generated_ct = None
+        self.prob = None
+        self.dis_loss = None
+        self.gen_loss = None
         # frequently used parameters
         gpu_number = len(parameter['gpu'].split(','))
         if gpu_number > 1:
@@ -23,13 +32,10 @@ class AdversarialNet:
         self.batch_size = parameter['batch_size']
         self.input_size = parameter['input_size']
         self.input_channels = parameter['input_channels']
-        self.scale = parameter['scale']
         self.feature_size = parameter['feature_size']
-        self.cardinality = int(self.feature_size / 4)
         self.sample_from = parameter['sample_from']
         self.sample_to = parameter['sample_to']
         self.phase = parameter['phase']
-        self.augmentation = parameter['augmentation']
         self.select_samples = parameter['select_samples']
         self.iteration = self.parameter['iteration']
         # Todo: pay attention to priority of sample selection
@@ -105,11 +111,10 @@ class AdversarialNet:
         self.generated_ct, self.prob = self.model(self.inputs, self.label)
 
         self.dis_loss = - (tf.log(self.prob[0, 0]) + tf.log(1 - self.prob[1, 0])) / 2
-        self.gen_loss = tf.reduce_mean(
+        self.gen_loss = - tf.log(self.prob[1, 0]) * self.coefficient + tf.reduce_mean(
             (self.generated_ct - self.label) * (self.generated_ct - self.label))
-        # - tf.log(self.prob[1, 0]) + self.coefficient *
-        # derivative
 
+        # derivative
         self.trainable_variables = tf.trainable_variables()
         self.gen_variables = tf.trainable_variables(scope='gen')
         self.dis_variables = tf.trainable_variables(scope='dis')
@@ -168,7 +173,7 @@ class AdversarialNet:
 
     def compute_coefficient(self, iteration):
         independent_iter = 10000
-        max_ratio = 0.01
+        max_ratio = 1
         if iteration < independent_iter:
             domain_ratio = 0.0
         else:
