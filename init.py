@@ -6,21 +6,16 @@ def init_parameter(name):
     parameter['batch_size'] = 1
     parameter['input_size'] = 64
     parameter['input_channels'] = 1
-    parameter['output_size'] = parameter['input_size']
-    parameter['output_class'] = 8
     # learning strategy
-    parameter['learning_rate_adv'] = 0.01
-    parameter['beta1_adv'] = 0.5
-    parameter['learning_rate_seg'] = 0.01
-    parameter['beta1_seg'] = 0.5
+    parameter['learning_rate_gen'] = 0.01
+    parameter['beta1_gen'] = 0.5
+    parameter['learning_rate_dis'] = 0.01
+    parameter['beta1_dis'] = 0.5
     parameter['iteration'] = 35000
     # data location
-    parameter['source_data_dir'] = '../MM-WHS/ct_train1/'
-    parameter['source_label_dir'] = '../MM-WHS/ct_train1/'
-    parameter['target_data_dir'] = '../MM-WHS/ct_train2/'
-    parameter['target_label_dir'] = '../MM-WHS/ct_train2/'
-    parameter['test_data_dir'] = '../MM-WHS/ct_test1/'
-    parameter['predict_label_dir'] = '../MM-WHS/ct_test1/prediction/'
+    parameter['mri_data_dir'] = '../iSeg/iSeg-2017-Training/'
+    parameter['ct_label_dir'] = '../iSeg/iSeg-2017-Training/'
+    parameter['predict_label_dir'] = '../MM-WHS/prediction/'
     # model configuration
     parameter['name'] = name
     parameter['model_name'] = f'mm-whs_{name}.model'
