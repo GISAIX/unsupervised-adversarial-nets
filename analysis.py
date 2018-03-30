@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 
 
 def loss_function():
-    print(f'Prob: {0.005} \t Loss: {-np.log(0.005)}')
-    print(f'Prob: {1} \t\t Loss: {-np.log(1)}')
+    print(f'Prob: {0.005} \t Loss: {-np.log(0.005):.{4}}')
+    print(f'Prob: {0.5} \t\t Loss: {-np.log(0.5):.{4}}')
+    print(f'Prob: {1} \t\t Loss: {-np.log(1):.{4}}')
     prob = np.linspace(start=0, stop=1, num=300 + 1)
     entropy = - np.log(prob + 1e-5)
     dice = 2 * prob / (1 + prob * prob + (1 - prob) * (1 - prob))
