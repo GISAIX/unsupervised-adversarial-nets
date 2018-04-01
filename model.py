@@ -70,7 +70,8 @@ class AdversarialNet:
 
     def model(self, inputs):
         is_training = (self.phase == 'train')
-
+        # Todo: maybe change to non-dilated network
+        # Todo: change to resnet
         with tf.device(device_name_or_function=self.device[0]):
             with tf.variable_scope('seg'):
                 conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=3, stride=1,
