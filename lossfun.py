@@ -1,18 +1,18 @@
 import tensorflow as tf
 
 
-def discriminator_entropy(prediction, label):
+def discriminator_entropy(prob, label):
     # input shape should be (batch, 1)
     # generative: 0, real: 1
     # Todo: check
     return - tf.reduce_mean(
-        label * tf.log(prediction) + (1 - label) * tf.log(1 - prediction))
+        label * tf.log(prob) + (1 - label) * tf.log(1 - prob))
 
 
-def generator_entropy(prediction, label):
+def generator_entropy(prob, label):
     # only input generative: 0
     return - tf.reduce_mean(
-        (1 - label) * label * tf.log(prediction))
+        (1 - label) * label * tf.log(prob))
 
 
 def reconstruction_error(generative, ground_truth):
@@ -34,7 +34,7 @@ def compute_gradient(images):
 def gradient_difference(generative, ground_truth):
     gradient_gen_x, gradient_gen_y, gradient_gen_z = compute_gradient(generative)
     gradient_label_x, gradient_label_y, gradient_label_z = compute_gradient(ground_truth)
-    loss = tf.reduce_sum((gradient_gen_x - gradient_label_x) * (gradient_gen_x - gradient_label_x)) + tf.reduce_sum(
-        (gradient_gen_y - gradient_label_y) * (gradient_gen_y - gradient_label_y)) + tf.reduce_sum(
+    loss = tf.reduce_mean((gradient_gen_x - gradient_label_x) * (gradient_gen_x - gradient_label_x)) + tf.reduce_mean(
+        (gradient_gen_y - gradient_label_y) * (gradient_gen_y - gradient_label_y)) + tf.reduce_mean(
         (gradient_gen_z - gradient_label_z) * (gradient_gen_z - gradient_label_z))
     return loss
