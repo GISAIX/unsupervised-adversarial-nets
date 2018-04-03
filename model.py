@@ -144,7 +144,7 @@ class AdversarialNet:
         beta1_dis = self.parameter['beta1_dis']
 
         # dynamics problem -> placeholder
-        dis_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_dis, beta1=beta1_dis).minimize(
+        dis_optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate_dis).minimize(
             self.dis_loss, var_list=self.dis_variables)
         gen_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_gen, beta1=beta1_gen).minimize(
             self.gen_loss, var_list=self.gen_variables)
