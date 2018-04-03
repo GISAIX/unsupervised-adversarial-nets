@@ -13,8 +13,6 @@ def main(_):
     parser.add_argument('-g', '--gpu', help='cuda visible devices')
     parser.add_argument('-t', '--test', action='store_true', help='test phase (default: train phase)')
     parser.add_argument('-s', '--sample', help='sample selection')
-    parser.add_argument('-a', '--augmentation', action='store_true',
-                        help='data augmentation including flipping and rotation')
     parser.add_argument('--iteration', help='training iterations')
     parser.add_argument('--save_interval', help='save interval')
     parser.add_argument('--test_interval', help='test interval')
@@ -50,10 +48,6 @@ def main(_):
         else:
             print('[!] Sample selection error.')
             exit(1)
-    if args.augmentation:
-        parameter['augmentation'] = True
-    else:
-        parameter['augmentation'] = False
     if args.iteration:
         parameter['iteration'] = int(args.iteration)
     if args.save_interval:

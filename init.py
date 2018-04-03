@@ -3,6 +3,7 @@
 def init_parameter(name):
     parameter = dict()
     # shape setting
+    # Todo: should change batch size
     parameter['batch_size'] = 1
     parameter['input_size'] = 64
     parameter['input_channels'] = 1
@@ -15,12 +16,11 @@ def init_parameter(name):
     # data location
     parameter['mri_data_dir'] = '../iSeg/iSeg-2017-Training/'
     parameter['ct_label_dir'] = '../iSeg/iSeg-2017-Training/'
-    parameter['predict_label_dir'] = '../MM-WHS/prediction/'
+    # parameter['predict_label_dir'] = '../MM-WHS/prediction/'
     # model configuration
     parameter['name'] = name
-    parameter['model_name'] = f'mm-whs_{name}.model'
+    parameter['model_name'] = f'mri_ct_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
-    parameter['scale'] = 1
     parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 10000
     parameter['test_interval'] = 2000
