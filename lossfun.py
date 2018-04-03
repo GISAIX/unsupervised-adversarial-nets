@@ -6,13 +6,14 @@ def discriminator_entropy(prob, label):
     # generative: 0, real: 1
     # Todo: check
     return - tf.reduce_mean(
-        label * tf.log(prob) + (1 - label) * tf.log(1 - prob))
+        label * tf.log(tf.clip_by_value(prob, 0.005, 1)) + (1 - label) * tf.log(
+            tf.clip_by_value(1 - prob, 0.005, 1)))
 
 
 def generator_entropy(prob, label):
     # only input generative: 0
     return - 2 * tf.reduce_mean(
-        (1 - label) * tf.log(prob))
+        (1 - label) * tf.log(tf.clip_by_value(prob, 0.005, 1)))
 
 
 def reconstruction_error(generative, ground_truth):
