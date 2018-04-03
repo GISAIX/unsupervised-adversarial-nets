@@ -10,7 +10,7 @@ def init_parameter(name):
     # learning strategy
     parameter['learning_rate_gen'] = 0.01
     parameter['beta1_gen'] = 0.5
-    parameter['learning_rate_dis'] = 0.01
+    parameter['learning_rate_dis'] = 0.1
     parameter['beta1_dis'] = 0.5
     parameter['iteration'] = 35000
     # data location

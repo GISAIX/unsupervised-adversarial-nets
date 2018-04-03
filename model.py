@@ -172,7 +172,7 @@ class AdversarialNet:
                 label = [0] * self.batch_size + [1] * self.batch_size
                 label = np.array(label, dtype=np.float32)
 
-                dis_only = (iteration >= 200) and (iteration + 1) % 20 < 10
+                dis_only = (iteration >= 0) and (iteration + 1) % 20 < 10
                 gen_only = not dis_only
                 if gen_only:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
@@ -204,15 +204,16 @@ class AdversarialNet:
             train_image_filelist, train_label_filelist, self.input_size, self.batch_size)
         # update network
 
-        _, dis_loss, entropy, error, gradient, gen_loss = self.session.run(
-            [optimizer, self.dis_loss, self.entropy, self.error, self.gradient, self.gen_loss],
+        _, dis_loss, entropy, error, gradient, gen_loss, prob = self.session.run(
+            [optimizer, self.dis_loss, self.entropy, self.error, self.gradient, self.gen_loss, self.prob],
             feed_dict={self.inputs: inputs_batch, self.ground_truth: ground_truth_batch,
                        self.coefficient: coefficient, self.label: label})
         '''output'''
         string_format = f'[Phase] {phase}\n'
         string_format += f'[Iteration] {iteration + 1} time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] dis_loss: {dis_loss:.{8}} gen_loss: {gen_loss:.{8}} \n' \
-                         f'[Loss] entropy: {entropy:.{8}} error: {error:.{8}} gradient: {gradient:.{8}}\n\n'
+                         f'[Loss] entropy: {entropy:.{8}} error: {error:.{8}} gradient: {gradient:.{8}}\n' \
+                         f'[Prob] prob: {prob}\n\n'
         loss_log.write(string_format)
         print(string_format, end='')
 
