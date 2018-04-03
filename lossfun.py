@@ -11,8 +11,8 @@ def discriminator_entropy(prob, label):
 
 def generator_entropy(prob, label):
     # only input generative: 0
-    return - tf.reduce_mean(
-        (1 - label) * label * tf.log(prob))
+    return - 2 * tf.reduce_mean(
+        (1 - label) * tf.log(prob))
 
 
 def reconstruction_error(generative, ground_truth):
