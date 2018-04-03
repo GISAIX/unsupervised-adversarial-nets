@@ -95,17 +95,14 @@ class AdversarialNet:
                 reshape = tf.reshape(tensor=average, shape=[2 * self.batch_size, -1])
 
                 full_1 = tf.contrib.layers.fully_connected(
-                    inputs=reshape, num_outputs=512, scope='full_1',
+                    inputs=reshape, num_outputs=512, scope='full_1', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
-                relu_1 = tf.nn.relu(features=full_1)
                 full_2 = tf.contrib.layers.fully_connected(
-                    inputs=relu_1, num_outputs=128, scope='full_2',
+                    inputs=full_1, num_outputs=128, scope='full_2', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
-                relu_2 = tf.nn.relu(features=full_2)
-                full_3 = tf.contrib.layers.fully_connected(
-                    inputs=relu_2, num_outputs=1, scope='full_3',
+                prob = tf.contrib.layers.fully_connected(
+                    inputs=full_2, num_outputs=1, scope='full_3', activation_fn=tf.nn.sigmoid,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
-                prob = tf.nn.sigmoid(x=full_3)
 
         return out, prob
 
