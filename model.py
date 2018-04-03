@@ -177,9 +177,9 @@ class AdversarialNet:
                                           stride=1, is_training=is_training, name='compress_7', use_bias=True)
                 # Todo: average pooling?
                 average = tf.reduce_mean(input_tensor=compress_7, axis=[1, 2, 3], name='average_pooling')
-                domain_feature = tf.contrib.layers.fully_connected(inputs=average, num_outputs=2, scope='domain',
-                                                                   weights_regularizer=tf.contrib.slim.l2_regularizer(
-                                                                       scale=0.0005))
+                domain_feature = tf.contrib.layers.fully_connected(
+                    inputs=average, num_outputs=2, scope='domain', activation_fn=None,
+                    weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
 
         # device: cpu0
         with tf.device(device_name_or_function=self.device[2]):
