@@ -22,7 +22,7 @@ def init_parameter(name):
     parameter['model_name'] = f'mri_ct_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
     parameter['test_stride'] = 16  # for overlap
-    parameter['save_interval'] = 10000
+    parameter['save_interval'] = 5000
     parameter['test_interval'] = 2000
     # scalable number of feature maps: default 32
     parameter['feature_size'] = 16
