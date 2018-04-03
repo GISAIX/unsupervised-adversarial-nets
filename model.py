@@ -67,9 +67,9 @@ class AdversarialNet:
                                       is_training=is_training, name='conv_7', use_bias=True)
                 conv_8 = conv_bn_relu(inputs=conv_7, output_channels=32, kernel_size=7, stride=1,
                                       is_training=is_training, name='conv_8', use_bias=True)
-                conv_9 = conv3d(inputs=conv_8, output_channels=32, kernel_size=3, stride=1,
-                                use_bias=True, name='conv_9')
-                out = conv3d(inputs=conv_9, output_channels=1, kernel_size=1, stride=1,
+                # conv_9 = conv3d(inputs=conv_8, output_channels=32, kernel_size=3, stride=1,
+                #                 use_bias=True, name='conv_9')
+                out = conv3d(inputs=conv_8, output_channels=1, kernel_size=1, stride=1,
                              use_bias=True, name='out')
 
         with tf.device(device_name_or_function=self.device[1]):
@@ -172,7 +172,7 @@ class AdversarialNet:
                 label = [0] * self.batch_size + [1] * self.batch_size
                 label = np.array(label, dtype=np.float32)
 
-                dis_only = (iteration >= 500) and (iteration + 1) % 2 == 1
+                dis_only = (iteration >= 500) and (iteration + 1) % 20 < 10
                 gen_only = not dis_only
                 if gen_only:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
