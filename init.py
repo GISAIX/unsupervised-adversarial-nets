@@ -4,7 +4,7 @@ def init_parameter(name):
     parameter = dict()
     # shape setting
     # Todo: should change batch size
-    parameter['batch_size'] = 1
+    parameter['batch_size'] = 2
     parameter['input_size'] = 64
     parameter['input_channels'] = 1
     # learning strategy

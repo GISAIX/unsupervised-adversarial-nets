@@ -172,7 +172,7 @@ class AdversarialNet:
                 label = [0] * self.batch_size + [1] * self.batch_size
                 label = np.array(label, dtype=np.float32)
 
-                dis_only = (iteration >= 500) and (iteration + 1) % 20 < 10
+                dis_only = (iteration >= 200) and (iteration + 1) % 20 < 10
                 gen_only = not dis_only
                 if gen_only:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
