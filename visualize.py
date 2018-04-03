@@ -1,4 +1,3 @@
-from iostream import load_image
 from glob import glob
 import cv2
 import nibabel as nib

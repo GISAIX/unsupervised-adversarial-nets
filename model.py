@@ -175,14 +175,14 @@ class AdversarialNet:
                 label = [0] * self.batch_size + [1] * self.batch_size
                 label = np.array(label, dtype=np.float32)
 
-                dis_only = (iteration >= 0) and iteration % 20 < 10
+                dis_only = (iteration >= 500) and iteration % 50 < 25
                 gen_only = not dis_only
                 if gen_only:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
-                                    gen_optimizer, loss_log, iteration, phase='gen', label=label)
+                                    gen_optimizer, loss_log, iteration, phase='Generative', label=label)
                 else:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
-                                    dis_optimizer, loss_log, iteration, phase='adv', label=label)
+                                    dis_optimizer, loss_log, iteration, phase='Discriminator', label=label)
                 # save and test module
                 if np.mod(iteration + 1, self.parameter['save_interval']) == 0:
                     self.save_checkpoint(self.parameter['checkpoint_dir'],
@@ -191,13 +191,15 @@ class AdversarialNet:
                 if np.mod(iteration + 1, self.parameter['test_interval']) == 0:
                     pass
 
-    def compute_coefficient(self, iteration):
+    @staticmethod
+    def compute_coefficient(iteration):
         independent_iter = 2000
-        max_ratio = 1
+        # max_ratio = 1
         if iteration < independent_iter:
             ratio = 0.0
         else:
-            ratio = max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
+            ratio = 0.5
+            # max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
         return ratio
 
     def train_task(self, train_image_filelist, train_label_filelist, coefficient,
@@ -212,11 +214,14 @@ class AdversarialNet:
             feed_dict={self.inputs: inputs_batch, self.ground_truth: ground_truth_batch,
                        self.coefficient: coefficient, self.label: label})
         '''output'''
+        prob_output = ''
+        for p in prob:
+            prob_output += str(p) + ' '
         string_format = f'[Phase] {phase}\n'
         string_format += f'[Iteration] {iteration + 1} time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] dis_loss: {dis_loss:.{8}} gen_loss: {gen_loss:.{8}} \n' \
                          f'[Loss] entropy: {entropy:.{8}} error: {error:.{8}} gradient: {gradient:.{8}}\n' \
-                         f'[Prob] prob: {prob}\n\n'
+                         f'[Prob] prob: {prob_output}\n\n'
         loss_log.write(string_format)
         print(string_format, end='')
 
