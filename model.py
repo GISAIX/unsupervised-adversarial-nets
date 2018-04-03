@@ -144,7 +144,7 @@ class AdversarialNet:
         beta1_dis = self.parameter['beta1_dis']
 
         # dynamics problem -> placeholder
-        dis_optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate_dis).minimize(
+        dis_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_dis, beta1=beta1_dis).minimize(
             self.dis_loss, var_list=self.dis_variables)
         gen_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_gen, beta1=beta1_gen).minimize(
             self.gen_loss, var_list=self.gen_variables)
@@ -175,7 +175,7 @@ class AdversarialNet:
                 label = [0] * self.batch_size + [1] * self.batch_size
                 label = np.array(label, dtype=np.float32)
 
-                dis_only = (iteration >= 0) and (iteration + 1) % 20 < 10
+                dis_only = (iteration >= 0) and iteration % 20 < 10
                 gen_only = not dis_only
                 if gen_only:
                     self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
