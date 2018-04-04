@@ -90,35 +90,18 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
 
 
 # load batches including domain information
-def load_train_batches(image_filelist, label_filelist, domain_info, input_size, batch_size,
-                       channel=1, flipping=False, rotation=False, scale=1):
-    # for index
-    image_list = []
-    label_list = []
-    domain_list = []
-    history = dict()
+def load_train_batches(image_list, label_list, domain_list, input_size, batch_size,
+                       channel=1, flipping=False, rotation=False):
     # for output
     image_batch_list = []
     label_batch_list = []
     domain_batch_list = []
     for i in range(batch_size):
-        select = np.random.randint(len(image_filelist))
-        name = image_filelist[select]
-        if name in history:
-            index = history[name]
-            image_batch, label_batch = crop_batch(image_list[index], label_list[index], input_size,
-                                                  channel=channel, flipping=flipping, rotation=rotation)
-            domain_batch = domain_list[index]
-        else:
-            image, label = load_image(image_filelist[select], label_filelist[select], scale=scale)
-            domain = domain_info[select]
-            history[name] = len(image_list)
-            image_list.append(image)
-            label_list.append(label)
-            domain_list.append(domain)
-            image_batch, label_batch = crop_batch(image, label, input_size,
-                                                  channel=channel, flipping=flipping, rotation=rotation)
-            domain_batch = domain
+        select = np.random.randint(len(label_list))
+        image_batch, label_batch = crop_batch(image_list[select], label_list[select], input_size,
+                                              channel=channel, flipping=flipping, rotation=rotation)
+        domain_batch = domain_list[select]
+
         image_batch_list.append(image_batch)
         label_batch_list.append(label_batch)
         domain_batch_list.append(domain_batch)

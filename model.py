@@ -226,15 +226,24 @@ class AdversarialNet:
         # 0: source, 1: target
         source_image_filelist, source_label_filelist = generate_filelist(
             self.parameter['source_data_dir'], self.parameter['source_label_dir'])
-        source_domain_info = [0] * len(source_label_filelist)
+        source_domain_list = [0] * len(source_label_filelist)
 
         target_image_filelist, target_label_filelist = generate_filelist(
             self.parameter['target_data_dir'], self.parameter['target_label_dir'])
-        target_domain_info = [1] * len(target_label_filelist)
+        target_domain_list = [1] * len(target_label_filelist)
 
-        mix_image_filelist = source_image_filelist + target_image_filelist
-        mix_label_filelist = source_label_filelist + target_label_filelist
-        mix_domain_info = source_domain_info + target_domain_info
+        # load all images to save time
+        start_time = time.time()
+        print('Loading data...')
+        source_image_list, source_label_list = load_all_images(
+            source_image_filelist, source_label_filelist, scale=self.scale)
+        target_image_list, target_label_list = load_all_images(
+            target_image_filelist, target_label_filelist, scale=self.scale)
+
+        mix_image_list = source_image_list + target_image_list
+        mix_label_list = source_label_list + target_label_list
+        mix_domain_list = source_domain_list + target_domain_list
+        print(f'Data loading time: {time.time() - start_time}')
 
         if not os.path.exists('loss/'):
             os.makedirs('loss/')
@@ -253,10 +262,10 @@ class AdversarialNet:
                 dis_only = (iteration >= 500) and iteration % 50 < 25
                 seg_only = not dis_only
                 if seg_only:
-                    self.train_task(source_image_filelist, source_label_filelist, source_domain_info,
+                    self.train_task(source_image_list, source_label_list, source_domain_list,
                                     seg_optimizer, coefficient, loss_log, iteration, phase='Segmentation')
                 else:
-                    self.train_task(mix_image_filelist, mix_label_filelist, mix_domain_info,
+                    self.train_task(mix_image_list, mix_label_list, mix_domain_list,
                                     dis_optimizer, coefficient, loss_log, iteration, phase='Discrimination')
                 # save and test module
                 if np.mod(iteration + 1, self.parameter['save_interval']) == 0:
@@ -275,12 +284,12 @@ class AdversarialNet:
             domain_ratio = max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
         return domain_ratio
 
-    def train_task(self, train_image_filelist, train_label_filelist, train_domain_info,
+    def train_task(self, train_image_list, train_label_list, train_domain_list,
                    optimizer, coefficient, loss_log, iteration, phase):
         start_time = time.time()
         image_batch, label_batch, domain_batch = load_train_batches(
-            train_image_filelist, train_label_filelist, train_domain_info, self.input_size,
-            self.batch_size, flipping=self.augmentation, rotation=self.augmentation, scale=self.scale)
+            train_image_list, train_label_list, train_domain_list, self.input_size,
+            self.batch_size, flipping=self.augmentation, rotation=self.augmentation)
         # update network
 
         print(f'Data loading time: {time.time() - start_time}')
