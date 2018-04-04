@@ -55,16 +55,14 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         label_crop = np.vectorize(mapping.get)(label_crop)
 
         # throw away part of defected training data?
-        # label_set = set(np.unique(label_crop))
-        # if len(label_set) == 1:
-        #     continue
-        # elif len(label_set) == 2 and np.random.randint(100) >= 50:
-        #     print('!', end='')
-        #     continue
-        # else:
-        #     pass_flag = True
-
-        pass_flag = True
+        label_set = set(np.unique(label_crop))
+        if len(label_set) == 1:
+            continue
+        elif len(label_set) == 2 and np.random.randint(100) >= 50:
+            print('!', end='')
+            continue
+        else:
+            pass_flag = True
 
         image_crop = image[crop_position[0]:crop_position[0] + input_size,
                            crop_position[1]:crop_position[1] + input_size,
