@@ -1,6 +1,6 @@
 from conv import *
-from lossfun import *
 from iostream import *
+from lossfun import *
 import os
 import numpy as np
 import tensorflow as tf
