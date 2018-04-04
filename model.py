@@ -283,6 +283,8 @@ class AdversarialNet:
             self.batch_size, flipping=self.augmentation, rotation=self.augmentation, scale=self.scale)
         # update network
 
+        print(f'Data loading time: {time.time() - start_time}')
+
         _, seg_entropy, seg_dice, seg_loss, dis_loss = self.session.run(
             [optimizer, self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss],
             feed_dict={self.inputs: image_batch, self.label: label_batch,
