@@ -88,12 +88,8 @@ class AdversarialNet:
 
                 dis_4 = conv3d(inputs=pool_3, output_channels=256, kernel_size=5, stride=1,
                                use_bias=True, name='dis_4')
-                # global average pooling
-                average = tf.layers.average_pooling3d(inputs=dis_4, pool_size=4, strides=4,
-                                                      padding='valid', name='average')
                 # reshape, notice double
-                reshape = tf.reshape(tensor=average, shape=[2 * self.batch_size, -1])
-
+                reshape = tf.reshape(tensor=dis_4, shape=[2 * self.batch_size, -1])
                 full_1 = tf.contrib.layers.fully_connected(
                     inputs=reshape, num_outputs=512, scope='full_1', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
