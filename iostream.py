@@ -13,10 +13,6 @@ def load_image(image_path, label_path, scale=1):
     mean_num = np.mean(image)
     deviation_num = np.std(image)
     image = (image - mean_num) / (deviation_num + 1e-5)
-    # Todo: label mapping only for MM-WHS
-    # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
-    mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
-    label = np.vectorize(mapping.get)(label)
     # check shape
     if image.shape != label.shape:
         print('Image and label shapes mismatch!')
@@ -53,20 +49,26 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
                            crop_position[1]:crop_position[1] + input_size,
                            crop_position[2]:crop_position[2] + input_size]
 
+        # label mapping only for MM-WHS
+        # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
+        mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
+        label_crop = np.vectorize(mapping.get)(label_crop)
+
         # throw away part of defected training data?
-        label_set = set(np.unique(label_crop))
-        if len(label_set) == 1:
-            continue
-        elif len(label_set) == 2 and np.random.randint(100) >= 50:
-            print('!', end='')
-            continue
-        else:
-            pass_flag = True
+        # label_set = set(np.unique(label_crop))
+        # if len(label_set) == 1:
+        #     continue
+        # elif len(label_set) == 2 and np.random.randint(100) >= 50:
+        #     print('!', end='')
+        #     continue
+        # else:
+        #     pass_flag = True
+
+        pass_flag = True
 
         image_crop = image[crop_position[0]:crop_position[0] + input_size,
                            crop_position[1]:crop_position[1] + input_size,
                            crop_position[2]:crop_position[2] + input_size]
-        # Todo: label mapping may perform here
 
     # rotation and flipping
     if np.random.random() > 0.333:
@@ -92,11 +94,12 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
 # load batches including domain information
 def load_train_batches(image_filelist, label_filelist, domain_info, input_size, batch_size,
                        channel=1, flipping=False, rotation=False, scale=1):
-    # sorting?
+    # for index
     image_list = []
     label_list = []
     domain_list = []
     history = dict()
+    # for output
     image_batch_list = []
     label_batch_list = []
     domain_batch_list = []
@@ -126,7 +129,6 @@ def load_train_batches(image_filelist, label_filelist, domain_info, input_size, 
 
 
 def load_all_images(image_filelist, label_filelist, scale=1):
-    # sorting?
     image_list = []
     label_list = []
     for i in range(len(image_filelist)):
