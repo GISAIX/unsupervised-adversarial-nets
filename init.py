@@ -35,4 +35,5 @@ def init_parameter(name):
     # sample selection
     parameter['sample_from'] = 0
     parameter['sample_to'] = 9
+    # it is not used now
     return parameter

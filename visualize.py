@@ -16,8 +16,10 @@ def extract_image(image_path, label_path):
     return image, label
 
 
-def slice_visualize(image):
-    # [  0 205 420 500 550 600 820 850]
+def slice_visualize(image, is_label=False):
+    if is_label:
+        mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
+        image = np.vectorize(mapping.get)(image)
     print(np.min(image), np.max(image))
     print(np.unique(image))
     min_num = np.min(image)
@@ -34,11 +36,11 @@ def slice_visualize(image):
 
 
 def visualize():
-    location = '../MM-WHS/ct_train1/'
+    location = '../MM-WHS/ct_train/'
     image_filelist, label_filelist = extract_path(location)
     for i in range(len(image_filelist)):
         img, gt = extract_image(image_filelist[i], label_filelist[i])
-        slice_visualize(gt)
+        slice_visualize(gt, is_label=True)
         slice_visualize(img)
         break
 
