@@ -282,6 +282,7 @@ class AdversarialNet:
             domain_ratio = 0.0
         else:
             domain_ratio = max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
+        # Todo: still need further adjustment
         return domain_ratio
 
     def train_task(self, train_image_list, train_label_list, train_domain_list,
@@ -294,15 +295,15 @@ class AdversarialNet:
 
         print(f'Data loading time: {time.time() - start_time}')
 
-        _, seg_entropy, seg_dice, seg_loss, dis_loss = self.session.run(
-            [optimizer, self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss],
+        _, seg_entropy, seg_dice, seg_loss, dis_loss, domain_feature = self.session.run(
+            [optimizer, self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss, self.domain_feature],
             feed_dict={self.inputs: image_batch, self.label: label_batch,
                        self.domain: domain_batch, self.coefficient: coefficient})
 
         string_format = f'[label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} [Phase] {phase}\n'
         string_format += f'[Iteration] {iteration + 1} time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] seg_entropy: {seg_entropy:.{8}} seg_dice: {seg_dice:.{8}}\n' \
-                         f'seg_loss: {seg_loss:.{8}} dis_loss: {dis_loss:.{8}} \n\n'
+                         f'seg_loss: {seg_loss:.{8}} dis_loss: {dis_loss:.{8}} [Classify] {domain_feature}\n\n'
 
         loss_log.write(string_format)
         print(string_format, end='')
