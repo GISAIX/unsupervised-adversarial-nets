@@ -93,11 +93,13 @@ class AdversarialNet:
                 full_1 = tf.contrib.layers.fully_connected(
                     inputs=reshape, num_outputs=512, scope='full_1', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
+                # dropout?
                 full_2 = tf.contrib.layers.fully_connected(
                     inputs=full_1, num_outputs=128, scope='full_2', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
+                # dropout?
                 prob = tf.contrib.layers.fully_connected(
-                    inputs=full_2, num_outputs=1, scope='full_3', activation_fn=tf.nn.sigmoid,
+                    inputs=full_2, num_outputs=2, scope='full_3', activation_fn=None,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
 
         return out, prob
@@ -110,7 +112,7 @@ class AdversarialNet:
                                            shape=[self.batch_size, self.input_size, self.input_size,
                                                   self.input_size, self.input_channels], name='ground_truth')
         self.coefficient = tf.placeholder(dtype=tf.float32, shape=[3], name='coefficient')
-        self.label = tf.placeholder(dtype=tf.float32, shape=[2 * self.batch_size], name='label')
+        self.label = tf.placeholder(dtype=tf.int32, shape=[2 * self.batch_size], name='label')
 
         self.generative, self.prob = self.model(self.inputs, self.ground_truth)
 

@@ -2,18 +2,23 @@ import tensorflow as tf
 
 
 def discriminator_entropy(prob, label):
-    # input shape should be (batch, 1)
+    # input shape should be [batch, 2]
     # generative: 0, real: 1
-    # Todo: check
-    return - tf.reduce_mean(
-        label * tf.log(tf.clip_by_value(prob, 0.005, 1)) + (1 - label) * tf.log(
-            tf.clip_by_value(1 - prob, 0.005, 1)))
+    softmax = tf.nn.softmax(logits=prob)
+    ground_truth = tf.one_hot(indices=label, depth=2)
+    loss = 0
+    for i in range(2):
+        loss -= tf.reduce_mean(
+            ground_truth[:, i] * tf.log(tf.clip_by_value(softmax[:, i], 0.005, 1)))
+    return loss
 
 
 def generator_entropy(prob, label):
     # only input generative: 0
+    softmax = tf.nn.softmax(logits=prob)
+    ground_truth = tf.one_hot(indices=label, depth=2)
     return - 2 * tf.reduce_mean(
-        (1 - label) * tf.log(tf.clip_by_value(prob, 0.005, 1)))
+        ground_truth[:, 0] * tf.log(tf.clip_by_value(softmax[:, 1], 0.005, 1)))
 
 
 def reconstruction_error(generative, ground_truth):
