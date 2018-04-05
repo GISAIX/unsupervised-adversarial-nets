@@ -256,7 +256,7 @@ class AdversarialNet:
             for iteration in range(self.iteration):
                 # observe dice loss first
                 dice_coefficient = 0
-                discriminative_ratio = self.compute_ratio(iteration)
+                discriminative_ratio = 0
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
                 dis_only = (iteration >= 500) and iteration % 50 < 25
