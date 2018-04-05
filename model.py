@@ -135,7 +135,7 @@ class AdversarialNet:
             with tf.variable_scope('dis'):
                 # discriminator todo: build resnet
                 concat_dimension = 4  # channels_last
-                extracted_feature = tf.concat([predicted_feature, auxiliary2_feature_1x, auxiliary1_feature_1x],
+                extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
                                               axis=concat_dimension, name='extracted_feature')
                 dis_1 = conv_bn_relu(inputs=extracted_feature, output_channels=32, kernel_size=5, stride=1,
                                      is_training=is_training, name='dis_1')
