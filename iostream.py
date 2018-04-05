@@ -14,8 +14,8 @@ def load_image(image_path, label_path, scale=1):
     deviation_num = np.std(image)
     image = (image - mean_num) / (deviation_num + 1e-5)
     # label mapping only for MM-WHS
-    # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
-    mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
+    # label mapping [0, 500, 600, 420, 550, 205, 820, 850] 421 from dataset error
+    mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7, 421: 3}
     label = np.vectorize(mapping.get)(label)
     # check shape
     if image.shape != label.shape:
