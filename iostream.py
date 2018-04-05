@@ -13,6 +13,10 @@ def load_image(image_path, label_path, scale=1):
     mean_num = np.mean(image)
     deviation_num = np.std(image)
     image = (image - mean_num) / (deviation_num + 1e-5)
+    # label mapping only for MM-WHS
+    # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
+    mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
+    label = np.vectorize(mapping.get)(label)
     # check shape
     if image.shape != label.shape:
         print('Image and label shapes mismatch!')
@@ -48,11 +52,6 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         label_crop = label[crop_position[0]:crop_position[0] + input_size,
                            crop_position[1]:crop_position[1] + input_size,
                            crop_position[2]:crop_position[2] + input_size]
-
-        # label mapping only for MM-WHS
-        # label mapping [0, 500, 600, 420, 550, 205, 820, 850]
-        mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7}
-        label_crop = np.vectorize(mapping.get)(label_crop)
 
         # throw away part of defected training data?
         label_set = set(np.unique(label_crop))
