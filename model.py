@@ -160,7 +160,7 @@ class AdversarialNet:
                     inputs=full_1, num_outputs=128, scope='full_2', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
                 domain_feature = tf.contrib.layers.fully_connected(
-                    inputs=full_2, num_outputs=2, scope='full_3', activation_fn=tf.nn.relu,
+                    inputs=full_2, num_outputs=2, scope='full_3', activation_fn=None,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
 
         # device: cpu0
