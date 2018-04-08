@@ -19,9 +19,9 @@ def conv_bn_relu(inputs, output_channels, kernel_size, stride, is_training, name
                  padding='same', use_bias=False, dilation=1):
     with tf.variable_scope(name_or_scope=name):
         conv = conv3d(inputs, output_channels, kernel_size, stride, padding=padding,
-                      use_bias=use_bias, name=name+'_conv', dilation=dilation)
+                      use_bias=use_bias, name=name + '_conv', dilation=dilation)
         bn = tf.contrib.layers.batch_norm(
             inputs=conv, decay=0.9, scale=True, epsilon=1e-5,
-            updates_collections=None, is_training=is_training, scope=name+'_batch_norm')
-        relu = tf.nn.relu(features=bn, name=name+'_relu')
+            updates_collections=None, is_training=is_training, scope=name + '_batch_norm')
+        relu = tf.nn.relu(features=bn, name=name + '_relu')
     return relu
