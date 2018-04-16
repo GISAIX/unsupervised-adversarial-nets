@@ -15,12 +15,12 @@ def init_parameter(name):
     parameter['beta1_seg'] = 0.5
     parameter['iteration'] = 35000
     # data location
-    parameter['source_data_dir'] = '../MM-WHS/ct_train/'
-    parameter['source_label_dir'] = '../MM-WHS/ct_train/'
-    parameter['target_data_dir'] = '../MM-WHS/mr_train/'
-    parameter['target_label_dir'] = '../MM-WHS/mr_train/'
-    parameter['test_source_dir'] = '../MM-WHS/ct_test/'
-    parameter['test_target_dir'] = '../MM-WHS/mr_test/'
+    parameter['source_data_dir'] = '../MM-WHS/ct_train1/'
+    parameter['source_label_dir'] = '../MM-WHS/ct_train1/'
+    parameter['target_data_dir'] = '../MM-WHS/mr_train1/'
+    parameter['target_label_dir'] = '../MM-WHS/mr_train1/'
+    parameter['test_data_dir'] = '../MM-WHS/ct_train2/'
+    parameter['test_label_dir'] = '../MM-WHS/ct_train2/'
     parameter['predict_label_dir'] = '../MM-WHS/prediction/'
     # model configuration
     parameter['name'] = name

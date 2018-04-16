@@ -4,10 +4,9 @@ import time
 
 
 # a passing network
-def network(_, label):
+def network(_, label, domain):
     # input is a numpy array
-    inference = label.copy()
-    return inference
+    return label.copy(), domain.copy()
 
 
 def compute_performance(inference, label, class_num):
@@ -29,21 +28,27 @@ def compute_performance(inference, label, class_num):
         # accuracy
         i_accuracy = np.sum(intersection) / (np.sum(i_label) + 1e-5)
 
+        # separate storing!
         print(f'{i}: {i_dice} {i_jaccard} {i_accuracy}')
         dice.append(i_dice)
         jaccard.append(i_jaccard)
         accuracy.append(i_accuracy)
     # time reduction needed
-    print(f'time: {time.time() - start_time}')
+    print(f'Estimate time: {time.time() - start_time}')
     return dice, jaccard, accuracy
 
 
-def test(image, label, strike=32):
-    input_size = 32
-    channel = 1
+def compute_domain_performance(discrimination, domain_label):
+    correct = 1 * (discrimination[:] == domain_label)
+    accuracy = np.sum(correct) / (discrimination.shape[0] + 1e-5)
+    print(f'Domain accuracy: {accuracy}')
+    return accuracy
+
+
+def infer(image, label, domain, input_size=32, strike=32, channel=1, infer_task=None, coefficient=None, loss_log=None):
 
     # # fast forwarding: 32, center-cropping: 16
-    # strike = input_size // 2  # if it is 16 now, equivalent to effective
+    # strike, equivalent to effective
 
     # skip
     strike_skip = (input_size - strike) // 2
@@ -54,9 +59,12 @@ def test(image, label, strike=32):
     image = np.expand_dims(image, axis=4)
     label = np.expand_dims(label, axis=0)
     # initialization with -1
+    discrimination = []
     inference = -1 * np.ones(label.shape, label.dtype)
     image_batch = np.zeros([1, input_size, input_size, input_size, channel], dtype='float32')
     label_batch = np.zeros([1, input_size, input_size, input_size], dtype='int32')
+    # degenerate domain batch
+    domain_batch = np.array([domain], dtype=np.int32)
 
     # -1 symbol for last
     depth_range = np.append(np.arange(depth - input_size + 1, step=strike), -1)
@@ -111,17 +119,28 @@ def test(image, label, strike=32):
                                                    fetch_w:fetch_w + input_size, 0]
                 label_batch[0, :, :, :] = label[0, fetch_d:fetch_d + input_size, fetch_h:fetch_h + input_size,
                                                 fetch_w:fetch_w + input_size]
+
                 # main body of network
-                infer_batch = network(image_batch, label_batch)
+                if infer_task is None:
+                    infer_batch, infer_domain = network(image_batch, label_batch, domain_batch)
+                else:
+                    infer_batch, infer_domain = infer_task(
+                        image_batch, label_batch, domain_batch, coefficient, loss_log,
+                        fetch_d / depth, fetch_h / height, fetch_w / width)
+
                 # fast forwarding
                 inference[0, put_d:put_d + size_d, put_h:put_h + size_h, put_w:put_w + size_w] = \
                     infer_batch[0, -size_d:, -size_h:, -size_w:]
+                discrimination.append(infer_domain[:])
 
-    print('time:', time.time() - start_time)
-    print('image:', image.shape)
-    print('label:', label.shape)
-    print('inference:', inference.shape)
-    print(f'strike: {strike}, equal: {np.array_equal(inference, label)}', )
+    discrimination = np.array(discrimination, dtype='int32')
+
+    print('Running time:', time.time() - start_time)
+    # print('image:', image.shape)
+    # print('label:', label.shape)
+    # print('inference:', inference.shape)
+    # print(f'strike: {strike}, equal: {np.array_equal(inference, label)}', )
+    _ = compute_domain_performance(discrimination, domain)
     _ = compute_performance(inference, label, 8)
 
 
@@ -130,4 +149,4 @@ if __name__ == '__main__':
                             '../MM-WHS/ct_train/ct_train_1001_label.nii.gz')
     print('image:', img.shape)
     print('label:', truth.shape)
-    test(img, truth, strike=32)
+    infer(img, truth, 0, strike=32)

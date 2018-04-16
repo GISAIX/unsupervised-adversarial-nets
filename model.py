@@ -1,4 +1,5 @@
 from conv import *
+from inference import infer
 from iostream import *
 from lossfun import *
 import os
@@ -308,10 +309,65 @@ class AdversarialNet:
         loss_log.write(string_format)
         print(string_format, end='')
 
-    def test(self):
-        # write function for testing
-        # split
-        pass
+    def test(self, reload=True):
+
+        test_image_list = None
+        test_label_list = None
+        test_domain_list = None
+
+        # reload model or image
+        if reload:
+            # Todo: load pre-trained model and checkpoint
+            self.session.run(tf.global_variables_initializer())
+
+            test_image_filelist, test_label_filelist = generate_filelist(
+                self.parameter['test_data_dir'], self.parameter['test_label_dir'])
+
+            # load all images to save time
+            start_time = time.time()
+            print('Loading data...')
+            test_image_list, test_label_list = load_all_images(
+                test_image_filelist, test_label_filelist, scale=self.scale)
+            # 0: source-ct, 1: target-mri
+            test_domain_list = [0] * len(test_label_filelist)
+            print(f'Data loading time: {time.time() - start_time}')
+
+        if not os.path.exists('test/'):
+            os.makedirs('test/')
+        line_buffer = 1
+        with open(file='test/test_{}.txt'.format(self.parameter['name']), mode='w', buffering=line_buffer) as loss_log:
+            loss_log.write('[Test Mode]\n')
+            loss_log.write(write_json(self.parameter))
+            loss_log.write('\n')
+
+            for ith in range(len(test_label_list)):
+                # not used in test
+                dice_coefficient = 0
+                discriminative_ratio = 0
+                coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
+
+                infer(image=test_image_list[ith], label=test_label_list[ith], domain=test_domain_list[ith],
+                      input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
+                      coefficient=coefficient, loss_log=loss_log)
+
+    def test_task(self, image_batch, label_batch, domain_batch, coefficient, loss_log, fetch_d, fetch_h, fetch_w):
+
+        start_time = time.time()
+        predicted_label, predicted_domain, seg_entropy, seg_dice, seg_loss, dis_loss = self.session.run(
+            [self.predicted_label, self.predicted_domain,
+             self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss],
+            feed_dict={self.inputs: image_batch, self.label: label_batch,
+                       self.domain: domain_batch, self.coefficient: coefficient})
+
+        string_format = f'[label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} ' \
+                        f'd: {fetch_d:.{2}} h: {fetch_h:.{2}} w: {fetch_w:.{2}}\n'
+        string_format += f'time: {time.time() - start_time:.{4}} ' \
+                         f'[Loss] seg_entropy: {seg_entropy:.{8}} seg_dice: {seg_dice:.{8}}\n' \
+                         f'seg_loss: {seg_loss:.{8}} dis_loss: {dis_loss:.{8}}\n\n'
+        loss_log.write(string_format)
+        print(string_format, end='')
+
+        return predicted_label, predicted_domain
 
     def sample_selection(self, image_filelist, label_filelist):
         selected_image_filelist = []
