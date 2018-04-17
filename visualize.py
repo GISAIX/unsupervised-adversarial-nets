@@ -1,6 +1,12 @@
 from iostream import generate_filelist, load_image
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.ndimage import rotate
+from skimage.transform import resize
 import cv2
+import matplotlib.pyplot as plt
+import nibabel as nib
 import numpy as np
+import time
 
 
 def extract_path(directory):
@@ -43,5 +49,57 @@ def visualize():
         break
 
 
+def create_3d_view(location, mr=False, rotation_flag=False):
+    _, label_filelist = extract_path(location)
+    for i, label_filename in enumerate(label_filelist):
+        label = nib.load(label_filename).get_data()
+        mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7, 421: 3}
+        label = np.vectorize(mapping.get)(label)
+
+        name = 'ct_'
+        ratio = 0.25
+        if mr:
+            name = 'mr_'
+            ratio = 0.5
+        if rotation_flag:
+            name += 'r_'
+            label = rotate(input=label, angle=90, axes=(0, 2), reshape=True, order=0)
+            label = rotate(input=label, angle=90, axes=(1, 2), reshape=True, order=0)
+            label = rotate(input=label, angle=90, axes=(0, 1), reshape=True, order=0)
+
+        output_shape = (np.array(label.shape) * ratio).astype(dtype='int32')
+        nearest_neighbor = 0
+        label = resize(image=label, output_shape=output_shape, order=nearest_neighbor,
+                       preserve_range=True, mode='constant')
+
+        model(label, name + str(i))
+
+
+def model(label, name):
+    print(label.shape)
+    # each part as a boolean array
+    cube_list = []
+    for i in range(8):
+        cube_list.append(label == i)
+    # combine all parts into single boolean array
+    voxels = (label > 0)
+    # set the colors of each object
+    color_array = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+    colors = np.empty(voxels.shape, dtype=object)
+    for i in range(1, 8):
+        colors[cube_list[i]] = color_array[i]
+
+    start_time = time.time()
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.voxels(voxels, facecolors=colors, edgecolor=None)
+    fig.savefig(f'plot/{name}.png', dpi=1200)
+    # plt.show()
+    print('plot', time.time() - start_time)
+
+
 if __name__ == '__main__':
-    visualize()
+    create_3d_view('../MM-WHS/ct_train/')
+    create_3d_view('../MM-WHS/mr_train/', mr=True)
+    create_3d_view('../MM-WHS/mr_train/', mr=True, rotation_flag=True)
+    # visualize()
