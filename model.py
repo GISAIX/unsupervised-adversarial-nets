@@ -318,7 +318,7 @@ class AdversarialNet:
         # reload model or image
         if reload:
             # Todo: load pre-trained model and checkpoint
-            self.session.run(tf.global_variables_initializer())
+            # self.session.run(tf.global_variables_initializer())
             if self.load_checkpoint(self.parameter['checkpoint_dir']):
                 print(" [*] Load Success")
             else:
@@ -351,7 +351,6 @@ class AdversarialNet:
             loss_log.write('\n')
 
             evaluation = Evaluation()
-            inference = []
             for ith in range(len(test_label_list)):
                 # not used in test
                 dice_coefficient = 0
@@ -362,13 +361,12 @@ class AdversarialNet:
                                     domain=test_domain_list[ith], input_size=self.input_size,
                                     strike=self.input_size, infer_task=self.test_task,
                                     coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
-                inference.append(i_inference)
-            inference = np.array(inference, dtype=object)
-            # not test
+                i_inference = i_inference[0, :, :, :]
+                np.savez('test/infer_{}_sample_{}.npz'.format(self.parameter['name'], ith), inference=i_inference)
             performance = evaluation.retrieve()
             domain_accuracy = evaluation.retrieve_domain()
             np.savez('test/test_{}.npz'.format(self.parameter['name']),
-                     performance=performance, domain_accuracy=domain_accuracy, inference=inference)
+                     performance=performance, domain_accuracy=domain_accuracy)
             string_format = f'{str(performance)}\n{str(domain_accuracy)}'
             loss_log.write(string_format)
             print(string_format, end='')
