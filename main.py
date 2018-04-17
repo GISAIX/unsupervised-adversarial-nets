@@ -53,10 +53,10 @@ def main(_):
         else:
             print('[!] Sample selection error.')
             exit(1)
-    if args.augmentation:
-        parameter['augmentation'] = True
-    else:
-        parameter['augmentation'] = False
+    # if args.augmentation:
+    #     parameter['augmentation'] = True
+    # else:
+    #     parameter['augmentation'] = False
     if args.iteration:
         parameter['iteration'] = int(args.iteration)
     if args.save_interval:

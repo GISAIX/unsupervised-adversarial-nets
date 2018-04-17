@@ -363,7 +363,7 @@ class AdversarialNet:
                                     strike=self.input_size, infer_task=self.test_task,
                                     coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
                 inference.append(i_inference)
-            inference = np.array(inference)
+            inference = np.array(inference, dtype=object)
             # not test
             performance = evaluation.retrieve()
             domain_accuracy = evaluation.retrieve_domain()
