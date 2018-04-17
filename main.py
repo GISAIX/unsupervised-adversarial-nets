@@ -37,6 +37,9 @@ def main(_):
     parameter = init_parameter(name)
     parameter['gpu'] = gpu
     parameter['phase'] = phase
+    # Todo: inconsistent batch problem
+    if phase == 'test':
+        parameter['batch_size'] = 1
     if args.sample:
         sample_select = args.sample.strip().split(',')
         if len(sample_select) == 1:

@@ -5,6 +5,7 @@ def init_parameter(name):
     # shape setting
     # Todo: should change batch size
     parameter['batch_size'] = 10
+    parameter['train_batch_size'] = parameter['batch_size']
     parameter['input_size'] = 32
     parameter['input_channels'] = 1
     # learning strategy
@@ -14,8 +15,8 @@ def init_parameter(name):
     parameter['beta1_dis'] = 0.5
     parameter['iteration'] = 35000
     # data location
-    parameter['mri_data_dir'] = '../iSeg/iSeg-2017-Training/'
-    parameter['ct_label_dir'] = '../iSeg/iSeg-2017-Training/'
+    parameter['t1_data_dir'] = '../iSeg/iSeg-2017-Training/'
+    parameter['t2_label_dir'] = '../iSeg/iSeg-2017-Training/'
     # parameter['predict_label_dir'] = '../MM-WHS/prediction/'
     # model configuration
     parameter['name'] = name

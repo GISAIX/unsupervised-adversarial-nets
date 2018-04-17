@@ -1,4 +1,5 @@
 from conv import *
+from inference import Evaluation, infer
 from iostream import *
 from lossfun import *
 import os
@@ -152,7 +153,7 @@ class AdversarialNet:
             os.makedirs('logs/')
 
         mri_image_filelist, ct_label_filelist = generate_filelist(
-            self.parameter['mri_data_dir'], self.parameter['ct_label_dir'])
+            self.parameter['t1_data_dir'], self.parameter['t2_label_dir'])
 
         if not os.path.exists('loss/'):
             os.makedirs('loss/')
@@ -220,10 +221,80 @@ class AdversarialNet:
         loss_log.write(string_format)
         print(string_format, end='')
 
-    def test(self):
-        # write function for testing
-        # split
-        pass
+    def test(self, reload=True):
+
+        test_t1_list = None
+        test_t2_list = None
+        test_label_list = None
+
+        # reload model or image
+        if reload:
+            if self.load_checkpoint(self.parameter['checkpoint_dir']):
+                print(" [*] Load Success")
+            else:
+                print(" [!] Load Failed")
+                exit(1)  # exit with load error
+
+            test_t1_filelist, test_t2_filelist = generate_filelist(
+                self.parameter['t1_data_dir'], self.parameter['t2_label_dir'])
+
+            # load all images to save time
+            start_time = time.time()
+            print('Loading data...')
+            test_t1_list, test_t2_list = load_all_images(
+                test_t1_filelist, test_t2_filelist)
+            # generative: 0, real: 1
+            test_label_list = [0] * len(test_t2_filelist)
+            print(f'Data loading time: {time.time() - start_time}')
+
+        # save log
+        if not os.path.exists('logs/'):
+            os.makedirs('logs/')
+        _ = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
+
+        if not os.path.exists('test/'):
+            os.makedirs('test/')
+        line_buffer = 1
+        with open(file='test/test_{}.txt'.format(self.parameter['name']), mode='w', buffering=line_buffer) as loss_log:
+            loss_log.write('[Test Mode]\n')
+            loss_log.write(write_json(self.parameter))
+            loss_log.write('\n')
+
+            evaluation = Evaluation()
+            for ith in range(len(test_t2_list)):
+                # not used in test
+                coefficient = np.array([0, 1, 1], dtype=np.float32)
+
+                infer(image=test_t1_list[ith], label=test_t2_list[ith], domain=test_label_list[ith],
+                      input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
+                      coefficient=coefficient, loss_log=loss_log, evaluation=evaluation)
+            # not test
+            performance = evaluation.retrieve()
+            dis_accuracy = evaluation.retrieve_domain()
+            np.savez('test/test_{}.npz'.format(self.parameter['name']),
+                     performance=performance, domain_accuracy=dis_accuracy)
+            string_format = f'{str(performance)}\n{str(dis_accuracy)}'
+            loss_log.write(string_format)
+            print(string_format, end='')
+
+    def test_task(self, image_batch, label_batch, domain_batch, coefficient, loss_log, fetch_d, fetch_h, fetch_w):
+
+        start_time = time.time()
+        generative, prob, dis_loss, entropy, error, gradient, gen_loss = self.session.run(
+            [self.generative, self.prob,
+             self.dis_loss, self.entropy, self.error, self.gradient, self.gen_loss],
+            feed_dict={self.inputs: image_batch, self.ground_truth: label_batch,
+                       self.label: domain_batch, self.coefficient: coefficient})
+
+        string_format = f'[Domain] {str(domain_batch)} ' \
+                        f'd: {fetch_d:.{2}} h: {fetch_h:.{2}} w: {fetch_w:.{2}}\n'
+        string_format += f'time: {time.time() - start_time:.{4}} ' \
+                         f'[Loss] dis_loss: {dis_loss:.{8}} entropy: {entropy:.{8}}\n' \
+                         f'error: {error:.{8}} gradient: {gradient:.{8}} gen_loss: {gen_loss:.{8}}\n\n'
+        loss_log.write(string_format)
+        print(string_format, end='')
+
+        return generative, prob
 
     '''
     def sample_selection(self, image_filelist, label_filelist):
@@ -248,7 +319,9 @@ class AdversarialNet:
         self.saver.save(self.session, os.path.join(checkpoint_dir, model_name), global_step=global_step)
 
     def load_checkpoint(self, checkpoint_dir):
-        model_dir = 'model_{}_{}'.format(self.feature_size, self.batch_size)
+        # inconsistent batch problem
+        train_batch_size = self.parameter['train_batch_size']
+        model_dir = 'model_{}_{}'.format(self.feature_size, train_batch_size)
         checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
         checkpoint_state = tf.train.get_checkpoint_state(checkpoint_dir)
         if checkpoint_state and checkpoint_state.model_checkpoint_path:
