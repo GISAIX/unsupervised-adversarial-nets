@@ -100,6 +100,7 @@ def load_train_batches(image_list, label_list, domain_list, input_size, batch_si
         image_batch, label_batch = crop_batch(image_list[select], label_list[select], input_size,
                                               channel=channel, flipping=flipping, rotation=rotation)
         domain_batch = domain_list[select]
+        # Todo: normalization here?
 
         image_batch_list.append(image_batch)
         label_batch_list.append(label_batch)

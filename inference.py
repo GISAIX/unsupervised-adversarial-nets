@@ -90,7 +90,7 @@ def compute_domain_performance(discrimination, domain_label):
 
 
 def infer(image, label, domain, input_size=32, strike=32, channel=1,
-          infer_task=None, coefficient=None, loss_log=None, evaluation=None):
+          infer_task=None, coefficient=None, loss_log=None, evaluation=None, sample=None):
 
     # # fast forwarding: 32, center-cropping: 16
     # strike, equivalent to effective
@@ -171,7 +171,7 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
                 else:
                     infer_batch, infer_domain = infer_task(
                         image_batch, label_batch, domain_batch, coefficient, loss_log,
-                        fetch_d / depth, fetch_h / height, fetch_w / width)
+                        fetch_d / depth, fetch_h / height, fetch_w / width, sample)
 
                 # fast forwarding
                 inference[0, put_d:put_d + size_d, put_h:put_h + size_h, put_w:put_w + size_w] = \
@@ -189,6 +189,8 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
     dice, jaccard, precision, recall = compute_performance(inference, label, 8)
     evaluation.add(dice, jaccard, precision, recall)
     evaluation.add_domain(accuracy)
+
+    return inference
 
 
 if __name__ == '__main__':

@@ -319,11 +319,11 @@ class AdversarialNet:
         if reload:
             # Todo: load pre-trained model and checkpoint
             self.session.run(tf.global_variables_initializer())
-            # if self.load_checkpoint(self.parameter['checkpoint_dir']):
-            #     print(" [*] Load Success")
-            # else:
-            #     print(" [!] Load Failed")
-            #     exit(1)  # exit with load error
+            if self.load_checkpoint(self.parameter['checkpoint_dir']):
+                print(" [*] Load Success")
+            else:
+                print(" [!] Load Failed")
+                exit(1)  # exit with load error
 
             test_image_filelist, test_label_filelist = generate_filelist(
                 self.parameter['test_data_dir'], self.parameter['test_label_dir'])
@@ -351,25 +351,30 @@ class AdversarialNet:
             loss_log.write('\n')
 
             evaluation = Evaluation()
+            inference = []
             for ith in range(len(test_label_list)):
                 # not used in test
                 dice_coefficient = 0
                 discriminative_ratio = 0
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
-                infer(image=test_image_list[ith], label=test_label_list[ith], domain=test_domain_list[ith],
-                      input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
-                      coefficient=coefficient, loss_log=loss_log, evaluation=evaluation)
-            # # not test
-            # performance = evaluation.retrieve()
-            # domain_accuracy = evaluation.retrieve_domain()
-            # np.savez('test/test_{}.npz'.format(self.parameter['name']),
-            #          performance=performance, domain_accuracy=domain_accuracy)
-            # string_format = f'{str(performance)}\n{str(domain_accuracy)}'
-            # loss_log.write(string_format)
-            # print(string_format, end='')
+                i_inference = infer(image=test_image_list[ith], label=test_label_list[ith],
+                                    domain=test_domain_list[ith], input_size=self.input_size,
+                                    strike=self.input_size, infer_task=self.test_task,
+                                    coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
+                inference.append(i_inference)
+            inference = np.array(inference)
+            # not test
+            performance = evaluation.retrieve()
+            domain_accuracy = evaluation.retrieve_domain()
+            np.savez('test/test_{}.npz'.format(self.parameter['name']),
+                     performance=performance, domain_accuracy=domain_accuracy, inference=inference)
+            string_format = f'{str(performance)}\n{str(domain_accuracy)}'
+            loss_log.write(string_format)
+            print(string_format, end='')
 
-    def test_task(self, image_batch, label_batch, domain_batch, coefficient, loss_log, fetch_d, fetch_h, fetch_w):
+    def test_task(self, image_batch, label_batch, domain_batch, coefficient,
+                  loss_log, fetch_d, fetch_h, fetch_w, sample):
 
         start_time = time.time()
         predicted_label, predicted_domain, seg_entropy, seg_dice, seg_loss, dis_loss = self.session.run(
@@ -378,7 +383,7 @@ class AdversarialNet:
             feed_dict={self.inputs: image_batch, self.label: label_batch,
                        self.domain: domain_batch, self.coefficient: coefficient})
 
-        string_format = f'[label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} ' \
+        string_format = f'[Sample] {sample} [label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} ' \
                         f'd: {fetch_d:.{2}} h: {fetch_h:.{2}} w: {fetch_w:.{2}}\n'
         string_format += f'time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] seg_entropy: {seg_entropy:.{8}} seg_dice: {seg_dice:.{8}}\n' \
