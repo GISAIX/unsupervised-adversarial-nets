@@ -261,23 +261,27 @@ class AdversarialNet:
             loss_log.write('\n')
 
             evaluation = Evaluation()
+            inference = []
             for ith in range(len(test_t2_list)):
                 # not used in test
                 coefficient = np.array([0, 1, 1], dtype=np.float32)
 
-                infer(image=test_t1_list[ith], label=test_t2_list[ith], domain=test_label_list[ith],
-                      input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
-                      coefficient=coefficient, loss_log=loss_log, evaluation=evaluation)
+                i_inference = infer(image=test_t1_list[ith], label=test_t2_list[ith], domain=test_label_list[ith],
+                                    input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
+                                    coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
+                inference.append(i_inference)
+            inference = np.array(inference)
             # not test
             performance = evaluation.retrieve()
             dis_accuracy = evaluation.retrieve_domain()
             np.savez('test/test_{}.npz'.format(self.parameter['name']),
-                     performance=performance, domain_accuracy=dis_accuracy)
+                     performance=performance, domain_accuracy=dis_accuracy, inference=inference)
             string_format = f'{str(performance)}\n{str(dis_accuracy)}'
             loss_log.write(string_format)
             print(string_format, end='')
 
-    def test_task(self, image_batch, label_batch, domain_batch, coefficient, loss_log, fetch_d, fetch_h, fetch_w):
+    def test_task(self, image_batch, label_batch, domain_batch, coefficient,
+                  loss_log, fetch_d, fetch_h, fetch_w, sample):
 
         start_time = time.time()
         generative, prob, dis_loss, entropy, error, gradient, gen_loss = self.session.run(
@@ -286,7 +290,7 @@ class AdversarialNet:
             feed_dict={self.inputs: image_batch, self.ground_truth: label_batch,
                        self.label: domain_batch, self.coefficient: coefficient})
 
-        string_format = f'[Domain] {str(domain_batch)} ' \
+        string_format = f'[Sample] {sample} [Domain] {str(domain_batch)} ' \
                         f'd: {fetch_d:.{2}} h: {fetch_h:.{2}} w: {fetch_w:.{2}}\n'
         string_format += f'time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] dis_loss: {dis_loss:.{8}} entropy: {entropy:.{8}}\n' \

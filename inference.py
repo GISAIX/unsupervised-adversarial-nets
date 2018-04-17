@@ -49,15 +49,14 @@ def compute_gradient(images):
 
 
 def compute_performance(inference, label):
-    start_time = time.time()
     error = np.mean((inference - label) * (inference - label))
     gradient_gen_x, gradient_gen_y, gradient_gen_z = compute_gradient(inference)
     gradient_label_x, gradient_label_y, gradient_label_z = compute_gradient(label)
     gradient = np.mean((gradient_gen_x - gradient_label_x) * (gradient_gen_x - gradient_label_x)) + np.mean(
         (gradient_gen_y - gradient_label_y) * (gradient_gen_y - gradient_label_y)) + np.mean(
         (gradient_gen_z - gradient_label_z) * (gradient_gen_z - gradient_label_z))
-    # time reduction needed
-    print(f'Estimate time: {time.time() - start_time}')
+    print(f'Error: {error}')
+    print(f'Gradient difference: {gradient}')
     return error, gradient
 
 
@@ -72,7 +71,7 @@ def compute_domain_performance(discrimination, domain_label):
 
 
 def infer(image, label, domain, input_size=32, strike=32, channel=1,
-          infer_task=None, coefficient=None, loss_log=None, evaluation=None):
+          infer_task=None, coefficient=None, loss_log=None, evaluation=None, sample=None):
 
     # # fast forwarding: 32, center-cropping: 16
     # strike, equivalent to effective
@@ -154,7 +153,7 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
                 else:
                     infer_batch, infer_domain = infer_task(
                         image_batch, label_batch, domain_batch, coefficient, loss_log,
-                        fetch_d / depth, fetch_h / height, fetch_w / width)
+                        fetch_d / depth, fetch_h / height, fetch_w / width, sample=sample)
 
                 # fast forwarding
                 inference[0, put_d:put_d + size_d, put_h:put_h + size_h, put_w:put_w + size_w, 0] = \
