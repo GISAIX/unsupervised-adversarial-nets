@@ -111,6 +111,7 @@ json/
 logs/
 loss/
 test/
+plot/
 checkpoint/
 supplement/*.jpg
 kernel/*.txt

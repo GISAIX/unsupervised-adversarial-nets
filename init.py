@@ -4,6 +4,7 @@ def init_parameter(name):
     parameter = dict()
     # shape setting
     parameter['batch_size'] = 6
+    parameter['train_batch_size'] = parameter['batch_size']
     parameter['input_size'] = 32
     parameter['input_channels'] = 1
     parameter['output_size'] = parameter['input_size']

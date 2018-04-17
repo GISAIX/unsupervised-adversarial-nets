@@ -1,5 +1,5 @@
 from conv import *
-from inference import infer
+from inference import Evaluation, infer
 from iostream import *
 from lossfun import *
 import os
@@ -319,6 +319,11 @@ class AdversarialNet:
         if reload:
             # Todo: load pre-trained model and checkpoint
             self.session.run(tf.global_variables_initializer())
+            # if self.load_checkpoint(self.parameter['checkpoint_dir']):
+            #     print(" [*] Load Success")
+            # else:
+            #     print(" [!] Load Failed")
+            #     exit(1)  # exit with load error
 
             test_image_filelist, test_label_filelist = generate_filelist(
                 self.parameter['test_data_dir'], self.parameter['test_label_dir'])
@@ -332,6 +337,11 @@ class AdversarialNet:
             test_domain_list = [0] * len(test_label_filelist)
             print(f'Data loading time: {time.time() - start_time}')
 
+        # save log
+        if not os.path.exists('logs/'):
+            os.makedirs('logs/')
+        _ = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
+
         if not os.path.exists('test/'):
             os.makedirs('test/')
         line_buffer = 1
@@ -340,6 +350,7 @@ class AdversarialNet:
             loss_log.write(write_json(self.parameter))
             loss_log.write('\n')
 
+            evaluation = Evaluation()
             for ith in range(len(test_label_list)):
                 # not used in test
                 dice_coefficient = 0
@@ -348,7 +359,15 @@ class AdversarialNet:
 
                 infer(image=test_image_list[ith], label=test_label_list[ith], domain=test_domain_list[ith],
                       input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
-                      coefficient=coefficient, loss_log=loss_log)
+                      coefficient=coefficient, loss_log=loss_log, evaluation=evaluation)
+            # # not test
+            # performance = evaluation.retrieve()
+            # domain_accuracy = evaluation.retrieve_domain()
+            # np.savez('test/test_{}.npz'.format(self.parameter['name']),
+            #          performance=performance, domain_accuracy=domain_accuracy)
+            # string_format = f'{str(performance)}\n{str(domain_accuracy)}'
+            # loss_log.write(string_format)
+            # print(string_format, end='')
 
     def test_task(self, image_batch, label_batch, domain_batch, coefficient, loss_log, fetch_d, fetch_h, fetch_w):
 
@@ -390,7 +409,9 @@ class AdversarialNet:
         self.saver.save(self.session, os.path.join(checkpoint_dir, model_name), global_step=global_step)
 
     def load_checkpoint(self, checkpoint_dir):
-        model_dir = 'model_{}_{}_{}'.format(self.feature_size, self.batch_size, self.output_size)
+        # inconsistent batch problem
+        train_batch_size = self.parameter['train_batch_size']
+        model_dir = 'model_{}_{}_{}'.format(self.feature_size, train_batch_size, self.output_size)
         checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
         checkpoint_state = tf.train.get_checkpoint_state(checkpoint_dir)
         if checkpoint_state and checkpoint_state.model_checkpoint_path:

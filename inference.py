@@ -3,6 +3,44 @@ import numpy as np
 import time
 
 
+class Evaluation:
+    def __init__(self):
+        self.performance = None
+        self.domain_accuracy = None
+        # storage
+        self.dice = []
+        self.jaccard = []
+        self.precision = []
+        self.recall = []
+        # additional
+        self.accuracy = []
+        for _ in range(8):
+            self.dice.append([])
+            self.jaccard.append([])
+            self.precision.append([])
+            self.recall.append([])
+
+    def add(self, dice, jaccard, precision, recall):
+        for i in range(8):
+            self.dice[i].append(dice[i])
+            self.jaccard[i].append(jaccard[i])
+            self.precision[i].append(precision[i])
+            self.recall[i].append(recall[i])
+
+    def add_domain(self, domain_accuracy):
+        self.accuracy.append(domain_accuracy)
+
+    def retrieve(self):
+        # shape: (4, 8, 1)
+        self.performance = np.array([self.dice, self.jaccard, self.precision, self.recall], dtype='float32')
+        return np.mean(self.performance, axis=2)
+
+    def retrieve_domain(self):
+        # shape: (1,)
+        self.domain_accuracy = np.array(self.accuracy, dtype='float32')
+        return np.mean(self.domain_accuracy, axis=0)
+
+
 # a passing network
 def network(_, label, domain):
     # input is a numpy array
@@ -10,32 +48,38 @@ def network(_, label, domain):
 
 
 def compute_performance(inference, label, class_num):
+    # all criterion
     dice = []
     jaccard = []
-    accuracy = []
+    precision = []
+    recall = []
+
     start_time = time.time()
     for i in range(class_num):
         i_inference = 1 * (inference[:, :, :, :] == i)
         i_label = 1 * (label[:, :, :, :] == i)
+        sum_label = np.sum(i_label)
+        sum_inference = np.sum(i_inference)
+        sum_intersection = np.sum(i_inference * i_label)
         # dice
-        intersection = np.sum(i_inference * i_label)
-        summation = np.sum(i_inference) + np.sum(i_label) + 1e-5
-        i_dice = 2 * intersection / summation
+        summation = sum_inference + sum_label + 1e-5
+        i_dice = 2 * sum_intersection / summation
         # jaccard
         addition = i_inference + i_label
         union = np.sum(1 * (addition[:, :, :, :] > 0)) + 1e-5
-        i_jaccard = intersection / union
-        # accuracy
-        i_accuracy = np.sum(intersection) / (np.sum(i_label) + 1e-5)
-
+        i_jaccard = sum_intersection / union
+        # precision, recall
+        i_precision = sum_intersection / (sum_inference + 1e-5)
+        i_recall = sum_intersection / (sum_label + 1e-5)
         # separate storing!
-        print(f'{i}: {i_dice} {i_jaccard} {i_accuracy}')
+        print(f'{i}: {i_dice} {i_jaccard} {i_precision} {i_recall}')
         dice.append(i_dice)
         jaccard.append(i_jaccard)
-        accuracy.append(i_accuracy)
+        precision.append(i_precision)
+        recall.append(i_recall)
     # time reduction needed
     print(f'Estimate time: {time.time() - start_time}')
-    return dice, jaccard, accuracy
+    return dice, jaccard, precision, recall
 
 
 def compute_domain_performance(discrimination, domain_label):
@@ -45,7 +89,8 @@ def compute_domain_performance(discrimination, domain_label):
     return accuracy
 
 
-def infer(image, label, domain, input_size=32, strike=32, channel=1, infer_task=None, coefficient=None, loss_log=None):
+def infer(image, label, domain, input_size=32, strike=32, channel=1,
+          infer_task=None, coefficient=None, loss_log=None, evaluation=None):
 
     # # fast forwarding: 32, center-cropping: 16
     # strike, equivalent to effective
@@ -140,8 +185,10 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1, infer_task=
     # print('label:', label.shape)
     # print('inference:', inference.shape)
     # print(f'strike: {strike}, equal: {np.array_equal(inference, label)}', )
-    _ = compute_domain_performance(discrimination, domain)
-    _ = compute_performance(inference, label, 8)
+    accuracy = compute_domain_performance(discrimination, domain)
+    dice, jaccard, precision, recall = compute_performance(inference, label, 8)
+    evaluation.add(dice, jaccard, precision, recall)
+    evaluation.add_domain(accuracy)
 
 
 if __name__ == '__main__':
@@ -149,4 +196,9 @@ if __name__ == '__main__':
                             '../MM-WHS/ct_train/ct_train_1001_label.nii.gz')
     print('image:', img.shape)
     print('label:', truth.shape)
-    infer(img, truth, 0, strike=32)
+    e = Evaluation()
+    infer(img, truth, 0, strike=32, evaluation=e)
+    print(e.retrieve().shape)
+    print(e.retrieve_domain().shape)
+    print(str(e.retrieve()))
+    print(str(e.retrieve_domain()))
