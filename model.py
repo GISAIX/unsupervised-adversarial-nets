@@ -280,7 +280,7 @@ class AdversarialNet:
                 coefficient = np.array([0, 1, 1], dtype=np.float32)
 
                 i_inference = infer(image=test_t1_list[ith], label=test_t2_list[ith], domain=test_label_list[ith],
-                                    input_size=self.input_size, strike=self.input_size // 2, infer_task=self.test_task,
+                                    input_size=self.input_size, strike=self.input_size, infer_task=self.test_task,
                                     coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
                 inference.append(i_inference)
             inference = np.array(inference)
