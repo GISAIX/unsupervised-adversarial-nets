@@ -19,6 +19,7 @@ class AdversarialNet:
         self.label = None
         self.generative = None
         self.prob = None
+        self.softmax_prob = None
         self.dis_loss = None
         self.entropy = None
         self.error = None
@@ -147,12 +148,12 @@ class AdversarialNet:
         gen_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_gen, beta1=beta1_gen).minimize(
             self.gen_loss, var_list=self.gen_variables)
 
-        if self.load_checkpoint(self.parameter['checkpoint_dir']):
-            print(" [*] Load Success")
-        else:
-            print(" [!] Load Failed")
-            self.session.run(tf.global_variables_initializer())
-            # perform initialization
+        # if self.load_checkpoint(self.parameter['checkpoint_dir']):
+        #     print(" [*] Load Success")
+        # else:
+        #     print(" [!] Load Failed")
+        self.session.run(tf.global_variables_initializer())
+        # perform initialization
 
         if not os.path.exists('logs/'):
             os.makedirs('logs/')
