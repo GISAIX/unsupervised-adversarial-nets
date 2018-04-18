@@ -9,11 +9,12 @@ def init_parameter(name):
     parameter['input_size'] = 32
     parameter['input_channels'] = 1
     # learning strategy
-    parameter['learning_rate_gen'] = 1e-6
+    parameter['learning_rate_gen'] = 1e-5
     parameter['beta1_gen'] = 0.5
-    parameter['learning_rate_dis'] = 1e-6
+    parameter['learning_rate_dis'] = 1e-5
     parameter['beta1_dis'] = 0.5
     parameter['iteration'] = 35000
+    parameter['augmentation'] = True
     # data location
     parameter['t1_data_dir'] = '../iSeg/iSeg-2017-Training/'
     parameter['t2_label_dir'] = '../iSeg/iSeg-2017-Training/'

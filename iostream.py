@@ -1,3 +1,4 @@
+from scipy.ndimage import rotate
 from glob import glob
 import json
 import nibabel as nib
@@ -25,7 +26,7 @@ def load_image(image_path, label_path):
 
 
 # crop single batch with the given image and label
-def crop_batch(image, label, input_size, channel=1):
+def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=False):
     image_batch = np.zeros([1, input_size, input_size, input_size, channel], dtype='float32')
     label_batch = np.zeros([1, input_size, input_size, input_size, channel], dtype='float32')
     # randomly select cube -> boundary considered
@@ -43,6 +44,32 @@ def crop_batch(image, label, input_size, channel=1):
                        crop_position[1]:crop_position[1] + input_size,
                        crop_position[2]:crop_position[2] + input_size]
 
+    image_crop = image_crop.copy()
+    label_crop = label_crop.copy()
+
+    mean_num = np.mean(image_crop)
+    deviation_num = np.std(image_crop)
+    image_crop = (image_crop - mean_num) / (deviation_num + 1e-5)
+
+    mean_num = np.mean(label_crop)
+    deviation_num = np.std(label_crop)
+    label_crop = (label_crop - mean_num) / (deviation_num + 1e-5)
+
+    # rotation and flipping
+    if np.random.random() > 0.333:
+        if np.random.random() > 0.5:
+            if rotation:
+                rotate_angle_list = [90, 180, 270]
+                axes_list = [(0, 1), (0, 2), (1, 2)]
+                _angle = rotate_angle_list[np.random.randint(3)]
+                _axes = axes_list[np.random.randint(3)]
+                image_crop = rotate(input=image_crop, angle=_angle, axes=_axes, reshape=False, order=1)
+                label_crop = rotate(input=label_crop, angle=_angle, axes=_axes, reshape=False, order=0)
+        else:
+            if flipping:
+                _axis = np.random.randint(3)
+                image_crop = np.flip(image_crop, axis=_axis)
+                label_crop = np.flip(label_crop, axis=_axis)
     # NDHWC
     image_batch[0, :, :, :, 0] = image_crop
     label_batch[0, :, :, :, 0] = label_crop
@@ -50,25 +77,13 @@ def crop_batch(image, label, input_size, channel=1):
 
 
 # load batches
-def load_train_batches(image_filelist, label_filelist, input_size, batch_size, channel=1):
-    # sorting?
-    image_list = []
-    label_list = []
-    history = dict()
+def load_train_batches(image_list, label_list, input_size, batch_size, channel=1, flipping=False, rotation=False):
     image_batch_list = []
     label_batch_list = []
     for i in range(batch_size):
-        select = np.random.randint(len(image_filelist))
-        name = image_filelist[select]
-        if name in history:
-            index = history[name]
-            image_batch, label_batch = crop_batch(image_list[index], label_list[index], input_size, channel=channel)
-        else:
-            image, label = load_image(image_filelist[select], label_filelist[select])
-            history[name] = len(image_list)
-            image_list.append(image)
-            label_list.append(label)
-            image_batch, label_batch = crop_batch(image, label, input_size, channel=channel)
+        select = np.random.randint(len(label_list))
+        image_batch, label_batch = crop_batch(image_list[select], label_list[select], input_size, channel=channel,
+                                              flipping=flipping, rotation=rotation)
         image_batch_list.append(image_batch)
         label_batch_list.append(label_batch)
     return np.concatenate(image_batch_list, axis=0), np.concatenate(label_batch_list, axis=0)
@@ -113,8 +128,8 @@ def load_json(string, file=False):
 
 if __name__ == '__main__':
     t1, t2 = generate_filelist('../iSeg/iSeg-2017-Training/', '../iSeg/iSeg-2017-Training/')
-    for i, c in enumerate(t1):
-        print(t1[i], t2[i])
-        d1 = nib.load(t1[i]).get_data()
-        d2 = nib.load(t2[i]).get_data()
+    for ith, c in enumerate(t1):
+        print(t1[ith], t2[ith])
+        d1 = nib.load(t1[ith]).get_data()
+        d2 = nib.load(t2[ith]).get_data()
         print(d1.shape == d2.shape)

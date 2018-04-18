@@ -52,27 +52,47 @@ def visualize():
 def create_3d_view(location, mr=False, rotation_flag=False):
     _, label_filelist = extract_path(location)
     for i, label_filename in enumerate(label_filelist):
-        label = nib.load(label_filename).get_data()
-        mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7, 421: 3}
-        label = np.vectorize(mapping.get)(label)
+        label = nib.load(label_filename).get_data()[:, :, :, 0]
 
-        name = 'ct_'
-        ratio = 0.25
-        if mr:
-            name = 'mr_'
-            ratio = 0.5
-        if rotation_flag:
-            name += 'r_'
-            label = rotate(input=label, angle=90, axes=(0, 2), reshape=True, order=0)
-            label = rotate(input=label, angle=90, axes=(1, 2), reshape=True, order=0)
-            label = rotate(input=label, angle=90, axes=(0, 1), reshape=True, order=0)
+        # mean_num = np.mean(label)
+        # deviation_num = np.std(label)
+        # label = (label - mean_num) / (deviation_num + 1e-5)
 
-        output_shape = (np.array(label.shape) * ratio).astype(dtype='int32')
-        nearest_neighbor = 0
-        label = resize(image=label, output_shape=output_shape, order=nearest_neighbor,
-                       preserve_range=True, mode='constant')
+        img = np.load('/Users/dqxu/Downloads/test_test_20180417_225033.npz')
+        data = img['performance']
+        print(data)
+        img = img['inference'][0, 0, :, :, :, 0]
+        mean_num = np.mean(img)
+        deviation_num = np.std(img)
+        img = (img - mean_num) / (deviation_num + 1e-5)
+        # from inference import compute_performance
 
-        model(label, name + str(i))
+        # img = np.expand_dims(img, axis=0)
+        # img = np.expand_dims(img, axis=4)
+        # label = np.expand_dims(label, axis=0)
+        # label = np.expand_dims(label, axis=4)
+
+        # compute_performance(img, label)
+        slice_visualize(img)
+
+        name = 't2_'
+        # ratio = 0.25
+        # if mr:
+        #     name = 'mr_'
+        #     ratio = 0.5
+        # if rotation_flag:
+        #     name += 'r_'
+        #     label = rotate(input=label, angle=90, axes=(0, 2), reshape=True, order=0)
+        #     label = rotate(input=label, angle=90, axes=(1, 2), reshape=True, order=0)
+        #     label = rotate(input=label, angle=90, axes=(0, 1), reshape=True, order=0)
+
+        # output_shape = (np.array(label.shape) * 0.1).astype(dtype='int32')
+        # nearest_neighbor = 0
+        # label = resize(image=label, output_shape=output_shape, order=nearest_neighbor,
+        #                preserve_range=True, mode='constant')
+
+        # model(label, name + str(i))
+        slice_visualize(label)
 
 
 def model(label, name):
@@ -93,13 +113,14 @@ def model(label, name):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     ax.voxels(voxels, facecolors=colors, edgecolor=None)
-    fig.savefig(f'plot/{name}.png', dpi=1200)
-    # plt.show()
+    # fig.savefig(f'plot/{name}.png', dpi=1200)
+    plt.show()
     print('plot', time.time() - start_time)
 
 
 if __name__ == '__main__':
-    create_3d_view('../MM-WHS/ct_train/')
-    create_3d_view('../MM-WHS/mr_train/', mr=True)
-    create_3d_view('../MM-WHS/mr_train/', mr=True, rotation_flag=True)
+    create_3d_view('../iSeg/iSeg-2017-Training/')
+    # create_3d_view('../MM-WHS/ct_train/')
+    # create_3d_view('../MM-WHS/mr_train/', mr=True)
+    # create_3d_view('../MM-WHS/mr_train/', mr=True, rotation_flag=True)
     # visualize()

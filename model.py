@@ -41,6 +41,7 @@ class AdversarialNet:
         self.sample_from = parameter['sample_from']
         self.sample_to = parameter['sample_to']
         self.phase = parameter['phase']
+        self.augmentation = parameter['augmentation']
         self.select_samples = parameter['select_samples']
         self.iteration = self.parameter['iteration']
         # Todo: pay attention to priority of sample selection
@@ -68,9 +69,9 @@ class AdversarialNet:
                                       is_training=is_training, name='conv_7', use_bias=True)
                 conv_8 = conv_bn_relu(inputs=conv_7, output_channels=32, kernel_size=7, stride=1,
                                       is_training=is_training, name='conv_8', use_bias=True)
-                # conv_9 = conv3d(inputs=conv_8, output_channels=32, kernel_size=3, stride=1,
-                #                 use_bias=True, name='conv_9')
-                out = conv3d(inputs=conv_8, output_channels=1, kernel_size=1, stride=1,
+                conv_9 = conv3d(inputs=conv_8, output_channels=32, kernel_size=3, stride=1,
+                                use_bias=True, name='conv_9')
+                out = conv3d(inputs=conv_9, output_channels=1, kernel_size=1, stride=1,
                              use_bias=True, name='out')
 
         with tf.device(device_name_or_function=self.device[1]):
@@ -102,8 +103,9 @@ class AdversarialNet:
                 prob = tf.contrib.layers.fully_connected(
                     inputs=full_2, num_outputs=2, scope='full_3', activation_fn=None,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
+                softmax_prob = tf.nn.softmax(logits=prob, name='prob')
 
-        return out, prob
+        return out, prob, softmax_prob
 
     def build_model(self):
         self.inputs = tf.placeholder(dtype=tf.float32,
@@ -115,7 +117,7 @@ class AdversarialNet:
         self.coefficient = tf.placeholder(dtype=tf.float32, shape=[3], name='coefficient')
         self.label = tf.placeholder(dtype=tf.int32, shape=[2 * self.batch_size], name='label')
 
-        self.generative, self.prob = self.model(self.inputs, self.ground_truth)
+        self.generative, self.prob, self.softmax_prob = self.model(self.inputs, self.ground_truth)
 
         # generative: 0, real: 1
         # consider later multiplication
@@ -145,15 +147,23 @@ class AdversarialNet:
         gen_optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_gen, beta1=beta1_gen).minimize(
             self.gen_loss, var_list=self.gen_variables)
 
-        self.session.run(tf.global_variables_initializer())
-
-        # Todo: load pre-trained model and checkpoint
+        if self.load_checkpoint(self.parameter['checkpoint_dir']):
+            print(" [*] Load Success")
+        else:
+            print(" [!] Load Failed")
+            self.session.run(tf.global_variables_initializer())
+            # perform initialization
 
         if not os.path.exists('logs/'):
             os.makedirs('logs/')
 
-        mri_image_filelist, ct_label_filelist = generate_filelist(
+        t1_image_filelist, t2_label_filelist = generate_filelist(
             self.parameter['t1_data_dir'], self.parameter['t2_label_dir'])
+
+        start_time = time.time()
+        print('Loading data...')
+        t1_image_list, t2_label_list = load_all_images(t1_image_filelist, t2_label_filelist)
+        print(f'Data loading time: {time.time() - start_time}')
 
         if not os.path.exists('loss/'):
             os.makedirs('loss/')
@@ -174,10 +184,10 @@ class AdversarialNet:
                 dis_only = (iteration >= 500) and iteration % 50 < 25
                 gen_only = not dis_only
                 if gen_only:
-                    self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
+                    self.train_task(t1_image_list, t2_label_list, coefficient,
                                     gen_optimizer, loss_log, iteration, phase='Generative', label=label)
                 else:
-                    self.train_task(mri_image_filelist, ct_label_filelist, coefficient,
+                    self.train_task(t1_image_list, t2_label_list, coefficient,
                                     dis_optimizer, loss_log, iteration, phase='Discriminator', label=label)
                 # save and test module
                 if np.mod(iteration + 1, self.parameter['save_interval']) == 0:
@@ -198,20 +208,22 @@ class AdversarialNet:
             # max_ratio * (iteration - independent_iter) / (self.iteration - independent_iter)
         return ratio
 
-    def train_task(self, train_image_filelist, train_label_filelist, coefficient,
+    def train_task(self, train_image_list, train_label_list, coefficient,
                    optimizer, loss_log, iteration, phase, label=None):
         start_time = time.time()
         inputs_batch, ground_truth_batch = load_train_batches(
-            train_image_filelist, train_label_filelist, self.input_size, self.batch_size)
+            train_image_list, train_label_list, self.input_size, self.batch_size,
+            flipping=self.augmentation, rotation=self.augmentation)
         # update network
 
-        _, dis_loss, entropy, error, gradient, gen_loss, prob = self.session.run(
-            [optimizer, self.dis_loss, self.entropy, self.error, self.gradient, self.gen_loss, self.prob],
+        _, dis_loss, entropy, error, gradient, gen_loss, prob, softmax_prob = self.session.run(
+            [optimizer, self.dis_loss, self.entropy, self.error, self.gradient, self.gen_loss,
+             self.prob, self.softmax_prob],
             feed_dict={self.inputs: inputs_batch, self.ground_truth: ground_truth_batch,
                        self.coefficient: coefficient, self.label: label})
         '''output'''
         prob_output = ''
-        for p in prob:
+        for p in softmax_prob:
             prob_output += str(p) + ' '
         string_format = f'[Phase] {phase}\n'
         string_format += f'[Iteration] {iteration + 1} time: {time.time() - start_time:.{4}} ' \
