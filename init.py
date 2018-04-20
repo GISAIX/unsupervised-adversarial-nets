@@ -17,6 +17,7 @@ def init_parameter(name):
     parameter['iteration'] = 35000
     parameter['augmentation'] = True
     # data location
+    parameter['dataset'] = 'MM-WHS'  # 'iSeg'
     parameter['source_data_dir'] = '../MM-WHS/ct_train1/'
     parameter['source_label_dir'] = '../MM-WHS/ct_train1/'
     parameter['target_data_dir'] = '../MM-WHS/mr_train1/'
@@ -29,7 +30,7 @@ def init_parameter(name):
     parameter['model_name'] = f'mm-whs_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
     parameter['scale'] = 1
-    parameter['test_stride'] = 16  # for overlap
+    parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 5000
     parameter['test_interval'] = 2000
     # scalable number of feature maps: default 32

@@ -87,13 +87,13 @@ class AdversarialNet:
                 res_4 = aggregated_conv(inputs=res_3, output_channels=self.feature_size * 16,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
                                         name='res_4', padding='same', use_bias=False, dilation=4)
-                # res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
-                #                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
-                #                         name='res_5', padding='same', use_bias=False, dilation=4)
+                res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
+                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                                        name='res_5', padding='same', use_bias=False, dilation=2)
                 # Todo: fusion scheme
                 fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_1')
-                concat_1 = res_4 + fuse_1
+                concat_1 = res_5 + fuse_1
                 res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
                                         name='res_6', padding='same', use_bias=False, dilation=2, residual=False)
@@ -103,10 +103,10 @@ class AdversarialNet:
                 res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
                                         cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
                                         name='res_7', padding='same', use_bias=False, dilation=1, residual=False)
-                # res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
-                #                         cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
-                #                         name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
-                deconv1 = deconv_bn_relu(inputs=res_7, output_channels=self.feature_size * 2, is_training=is_training,
+                res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
+                                        name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
+                deconv1 = deconv_bn_relu(inputs=res_8, output_channels=self.feature_size * 2, is_training=is_training,
                                          name='deconv1')
                 fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_3')
@@ -114,11 +114,11 @@ class AdversarialNet:
                 res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
-                # res_10 = aggregated_conv(inputs=None, output_channels=self.feature_size, cardinality=self.cardinality,
-                #                          bottleneck_d=4, is_training=is_training, name='res_10', padding='same',
-                #                          use_bias=False, dilation=1, residual=False)
+                res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size,
+                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
+                                         name='res_10', padding='same', use_bias=False, dilation=1, residual=False)
                 # predicted probability
-                predicted_feature = conv3d(inputs=res_9, output_channels=self.output_class, kernel_size=1, stride=1,
+                predicted_feature = conv3d(inputs=res_10, output_channels=self.output_class, kernel_size=1, stride=1,
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
@@ -134,34 +134,52 @@ class AdversarialNet:
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('dis'):
-                # discriminator todo: build resnet
-                concat_dimension = 4  # channels_last
-                extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
-                                              axis=concat_dimension, name='extracted_feature')
-                dis_1 = conv_bn_relu(inputs=extracted_feature, output_channels=32, kernel_size=5, stride=1,
-                                     is_training=is_training, name='dis_1')
-                pool_1 = tf.layers.max_pooling3d(inputs=dis_1, pool_size=2, strides=2, name='pool_1')
+                # concat_dimension = 4  # channels_last
+                # extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
+                #                               axis=concat_dimension, name='extracted_feature')
+                extracted_feature = inputs
+                filters = [64, 64, 128, 256, 512]
+                kernels = [5, 3, 3, 3, 3]
+                strides = [1, 1, 2, 1, 1]
 
-                dis_2 = conv_bn_relu(inputs=pool_1, output_channels=64, kernel_size=5, stride=1,
-                                     is_training=is_training, name='dis_2')
-                pool_2 = tf.layers.max_pooling3d(inputs=dis_2, pool_size=2, strides=2, name='pool_2')
+                dis1_1 = conv_bn_relu(inputs=extracted_feature, output_channels=filters[0], kernel_size=kernels[0],
+                                      stride=strides[0], is_training=is_training, name='dis1_1')
+                pool1_2 = tf.layers.max_pooling3d(inputs=dis1_1, pool_size=3, strides=2, name='pool1_2', padding='same')
 
-                dis_3 = conv_bn_relu(inputs=pool_2, output_channels=128, kernel_size=5, stride=1,
-                                     is_training=is_training, name='dis_3')
-                pool_3 = tf.layers.max_pooling3d(inputs=dis_3, pool_size=2, strides=2, name='pool_3')
+                dis2_1 = residual_block(inputs=pool1_2, output_channels=filters[1], kernel_size=kernels[1],
+                                        stride=strides[1], is_training=is_training, name='dis2_1',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+                dis2_2 = residual_block(inputs=dis2_1, output_channels=filters[1], kernel_size=kernels[1],
+                                        stride=strides[1], is_training=is_training, name='dis2_2',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
 
-                dis_4 = conv3d(inputs=pool_3, output_channels=256, kernel_size=5, stride=1,
-                               use_bias=True, name='dis_4')
-                # reshape
-                reshape = tf.reshape(tensor=dis_4, shape=[self.batch_size, -1])
-                full_1 = tf.contrib.layers.fully_connected(
-                    inputs=reshape, num_outputs=512, scope='full_1', activation_fn=tf.nn.relu,
-                    weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
-                full_2 = tf.contrib.layers.fully_connected(
-                    inputs=full_1, num_outputs=128, scope='full_2', activation_fn=tf.nn.relu,
+                dis3_1 = residual_block(inputs=dis2_2, output_channels=filters[2], kernel_size=kernels[2],
+                                        stride=strides[2], is_training=is_training, name='dis3_1',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+                dis3_2 = residual_block(inputs=dis3_1, output_channels=filters[2], kernel_size=kernels[1],
+                                        stride=strides[1], is_training=is_training, name='dis3_2',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+
+                dis4_1 = residual_block(inputs=dis3_2, output_channels=filters[3], kernel_size=kernels[3],
+                                        stride=strides[3], is_training=is_training, name='dis4_1',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+                dis4_2 = residual_block(inputs=dis4_1, output_channels=filters[3], kernel_size=kernels[1],
+                                        stride=strides[1], is_training=is_training, name='dis4_2',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+
+                dis5_1 = residual_block(inputs=dis4_2, output_channels=filters[4], kernel_size=kernels[4],
+                                        stride=strides[4], is_training=is_training, name='dis5_1',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+                dis5_2 = residual_block(inputs=dis5_1, output_channels=filters[4], kernel_size=kernels[1],
+                                        stride=strides[1], is_training=is_training, name='dis5_2',
+                                        padding='same', use_bias=False, dilation=1, residual=True)
+
+                global_average = tf.reduce_mean(dis5_2, [1, 2, 3])
+                fc_1 = tf.contrib.layers.fully_connected(
+                    inputs=global_average, num_outputs=64, scope='fc_1', activation_fn=None,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
                 domain_feature = tf.contrib.layers.fully_connected(
-                    inputs=full_2, num_outputs=2, scope='full_3', activation_fn=None,
+                    inputs=fc_1, num_outputs=2, scope='domain_feature', activation_fn=None,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
 
         # device: cpu0
@@ -244,7 +262,7 @@ class AdversarialNet:
         mix_image_list = source_image_list + target_image_list
         mix_label_list = source_label_list + target_label_list
         mix_domain_list = source_domain_list + target_domain_list
-        print(f'Data loading time: {time.time() - start_time}')
+        print(f'Data ({len(source_image_list)},{len(target_image_list)}) loading time: {time.time() - start_time}')
 
         if not os.path.exists('loss/'):
             os.makedirs('loss/')
@@ -260,7 +278,7 @@ class AdversarialNet:
                 discriminative_ratio = 0
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
-                dis_only = (iteration >= 500) and iteration % 50 < 25
+                dis_only = iteration % 50 < 25  # (iteration >= 500) and
                 seg_only = not dis_only
                 if seg_only:
                     self.train_task(source_image_list, source_label_list, source_domain_list,

@@ -1,4 +1,5 @@
 from glob import glob
+from init import init_parameter
 from scipy.ndimage import rotate
 from skimage.transform import resize
 import json
@@ -10,9 +11,10 @@ import numpy as np
 def load_image(image_path, label_path, scale=1):
     image = nib.load(image_path).get_data()
     label = nib.load(label_path).get_data()
-    mean_num = np.mean(image)
-    deviation_num = np.std(image)
-    image = (image - mean_num) / (deviation_num + 1e-5)
+    # mean_num = np.mean(image)
+    # deviation_num = np.std(image)
+    # image = (image - mean_num) / (deviation_num + 1e-5)
+
     # label mapping only for MM-WHS
     # label mapping [0, 500, 600, 420, 550, 205, 820, 850] 421 from dataset error
     mapping = {0: 0, 205: 5, 420: 3, 500: 1, 550: 4, 600: 2, 820: 6, 850: 7, 421: 3}
@@ -54,6 +56,7 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
                            crop_position[2]:crop_position[2] + input_size]
 
         # throw away part of defected training data?
+        # Todo: use the idea of sphere?
         label_set = set(np.unique(label_crop))
         if len(label_set) == 1:
             continue
@@ -82,6 +85,8 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
                 _axis = np.random.randint(3)
                 image_crop = np.flip(image_crop, axis=_axis)
                 label_crop = np.flip(label_crop, axis=_axis)
+    # normalization
+    image_crop = (image_crop - np.mean(image_crop)) / (np.std(image_crop) + 1e-5)
     # NDHWC
     image_batch[0, :, :, :, 0] = image_crop
     label_batch[0, :, :, :] = label_crop
@@ -100,7 +105,6 @@ def load_train_batches(image_list, label_list, domain_list, input_size, batch_si
         image_batch, label_batch = crop_batch(image_list[select], label_list[select], input_size,
                                               channel=channel, flipping=flipping, rotation=rotation)
         domain_batch = domain_list[select]
-        # Todo: normalization here?
 
         image_batch_list.append(image_batch)
         label_batch_list.append(label_batch)
@@ -120,9 +124,17 @@ def load_all_images(image_filelist, label_filelist, scale=1):
 
 
 def generate_filelist(image_dir, label_dir):
-    # Todo: add option for dataset
-    image_filelist = glob(pathname='{}/*image.nii.gz'.format(image_dir))
-    label_filelist = glob(pathname='{}/*label.nii.gz'.format(label_dir))
+    image_filelist = None
+    label_filelist = None
+    if init_parameter('empty')['dataset'] == 'MM-WHS':
+        image_filelist = glob(pathname='{}/*image.nii.gz'.format(image_dir))
+        label_filelist = glob(pathname='{}/*label.nii.gz'.format(label_dir))
+    elif init_parameter('empty')['dataset'] == 'iSeg':
+        image_filelist = glob(pathname='{}/*T1.img'.format(image_dir))
+        label_filelist = glob(pathname='{}/*T2.img'.format(label_dir))
+    else:
+        print('Error dataset provided.')
+        exit(1)
     image_filelist.sort()
     label_filelist.sort()
     return image_filelist, label_filelist

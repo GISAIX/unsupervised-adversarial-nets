@@ -102,3 +102,37 @@ def deconv_bn_relu(inputs, output_channels, is_training, name):
                                           scope=name + '_batch_norm')
         relu = tf.nn.relu(features=bn, name=name + '_relu')
     return relu
+
+
+def residual_block(inputs, output_channels, kernel_size, stride, is_training, name,
+                   padding='same', use_bias=False, dilation=1, residual=True):
+    with tf.variable_scope(name_or_scope=name):
+        # first block
+        conv_0 = conv3d(inputs, output_channels, kernel_size, stride, padding=padding,
+                        use_bias=use_bias, name=name + '_conv_a', dilation=dilation)
+        bn_0 = tf.contrib.layers.batch_norm(inputs=conv_0, decay=0.9, scale=True, epsilon=1e-5,
+                                            updates_collections=None, is_training=is_training,
+                                            scope=name + '_batch_norm_a')
+        relu_0 = tf.nn.relu(features=bn_0, name=name + '_relu_a')
+        # second block
+        conv_1 = conv3d(relu_0, output_channels, kernel_size, stride=1, padding=padding,
+                        use_bias=use_bias, name=name + '_conv_b', dilation=dilation)
+        bn_1 = tf.contrib.layers.batch_norm(inputs=conv_1, decay=0.9, scale=True, epsilon=1e-5,
+                                            updates_collections=None, is_training=is_training,
+                                            scope=name + '_batch_norm_b')
+        # shortcut connection
+        input_channels = inputs.get_shape().as_list()[-1]
+        if input_channels == output_channels:
+            if stride == 1:
+                shortcut = tf.identity(inputs, name=name + 'shortcut')
+            else:
+                shortcut = tf.nn.max_pool(input=inputs, ksize=[1, stride, stride, stride, 1],
+                                          strides=[1, stride, stride, stride, 1],
+                                          padding='VALID', name=name + 'shortcut')
+        else:
+            shortcut = conv3d(inputs, output_channels, kernel_size=1, stride=stride, padding='same',
+                              use_bias=True, name=name + 'shortcut', dilation=1)
+
+        out = bn_1 + shortcut
+        relu_1 = tf.nn.relu(features=out, name=name + '_relu_b')
+        return relu_1
