@@ -30,7 +30,7 @@ def cross_entropy_loss(prediction, label, class_num):
         i_ground_truth = ground_truth[:, :, :, :, i]
         # adjusted weight
         weight = tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
-        loss -= tf.reduce_mean((1 - weight) / weight * i_ground_truth * tf.log(
+        loss -= tf.reduce_mean((1 / (weight + 1e-5) - 1) * i_ground_truth * tf.log(
             tf.clip_by_value(t=i_prediction, clip_value_min=0.005, clip_value_max=1)))
         # ratio += (1 - weight) * weight
     return loss / (unique - 1)

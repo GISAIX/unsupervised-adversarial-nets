@@ -22,6 +22,7 @@ class AdversarialNet:
         self.predicted_label = None
         self.auxiliary1_feature_1x = None
         self.auxiliary2_feature_1x = None
+        self.domain_prob = None
         self.domain_feature = None
         self.predicted_domain = None
         # loss
@@ -191,7 +192,7 @@ class AdversarialNet:
             predicted_domain = tf.argmax(input=domain_prob, axis=1, name='predicted_domain')
 
         return predicted_feature, predicted_label, auxiliary1_feature_1x, auxiliary2_feature_1x, \
-            domain_feature, predicted_domain
+            domain_feature, domain_prob, predicted_domain
 
     def build_model(self):
         self.inputs = tf.placeholder(dtype=tf.float32, shape=[self.batch_size, self.input_size, self.input_size,
@@ -203,7 +204,7 @@ class AdversarialNet:
         # 0: dice coefficient, 1: discriminative ratio
 
         self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
-            self.domain_feature, self.predicted_domain = self.model(self.inputs)
+            self.domain_feature, self.domain_prob, self.predicted_domain = self.model(self.inputs)
 
         self.main_entropy = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_entropy = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
@@ -274,11 +275,11 @@ class AdversarialNet:
 
             for iteration in range(self.iteration):
                 # observe dice loss first
-                dice_coefficient = 0
-                discriminative_ratio = 0
+                dice_coefficient = 0.2
+                discriminative_ratio = self.compute_ratio(iteration)
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
-                dis_only = iteration % 50 < 25  # (iteration >= 500) and
+                dis_only = iteration % 50 >= 25  # (iteration >= 500) and
                 seg_only = not dis_only
                 if seg_only:
                     self.train_task(source_image_list, source_label_list, source_domain_list,
@@ -295,8 +296,8 @@ class AdversarialNet:
                     pass
 
     def compute_ratio(self, iteration):
-        independent_iter = 2500
-        max_ratio = 0.05
+        independent_iter = 5000
+        max_ratio = 0.1
         if iteration < independent_iter:
             domain_ratio = 0.0
         else:
@@ -314,15 +315,15 @@ class AdversarialNet:
 
         print(f'Data loading time: {time.time() - start_time}')
 
-        _, seg_entropy, seg_dice, seg_loss, dis_loss, domain_feature = self.session.run(
-            [optimizer, self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss, self.domain_feature],
+        _, seg_entropy, seg_dice, seg_loss, dis_loss, domain_prob = self.session.run(
+            [optimizer, self.seg_entropy, self.seg_dice, self.seg_loss, self.dis_loss, self.domain_prob],
             feed_dict={self.inputs: image_batch, self.label: label_batch,
                        self.domain: domain_batch, self.coefficient: coefficient})
 
         string_format = f'[label] {str(np.unique(label_batch))} [Domain] {str(domain_batch)} [Phase] {phase}\n'
         string_format += f'[Iteration] {iteration + 1} time: {time.time() - start_time:.{4}} ' \
                          f'[Loss] seg_entropy: {seg_entropy:.{8}} seg_dice: {seg_dice:.{8}}\n' \
-                         f'seg_loss: {seg_loss:.{8}} dis_loss: {dis_loss:.{8}} [Classify] {domain_feature}\n\n'
+                         f'seg_loss: {seg_loss:.{8}} dis_loss: {dis_loss:.{8}} [Classify] {domain_prob}\n\n'
 
         loss_log.write(string_format)
         print(string_format, end='')
