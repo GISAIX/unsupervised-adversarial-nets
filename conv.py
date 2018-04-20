@@ -79,24 +79,25 @@ def aggregated_conv(inputs, output_channels, cardinality, bottleneck_d, is_train
     return relu
 
 
-def deconv3d(inputs, output_channels, name='deconv'):
+def deconv3d(inputs, output_channels, name='deconv', runtime_batch_size=None):
     # depth, height and width
-    batch, in_depth, in_height, in_width, in_channels = [int(d) for d in inputs.get_shape()]
+    in_depth, in_height, in_width, in_channels = [int(d) for i, d in enumerate(inputs.get_shape()) if i != 0]
     dev_filter = tf.get_variable(
         name=name + '/filter', shape=[4, 4, 4, output_channels, in_channels],
         dtype=tf.float32, initializer=tf.random_normal_initializer(mean=0.0, stddev=0.01),
         regularizer=slim.l2_regularizer(scale=0.0005))
     deconv = tf.nn.conv3d_transpose(
         value=inputs, filter=dev_filter,
-        output_shape=[batch, in_depth * 2, in_height * 2, in_width * 2, output_channels],
+        output_shape=tf.stack([runtime_batch_size, in_depth * 2, in_height * 2, in_width * 2, output_channels]),
         strides=[1, 2, 2, 2, 1], padding='SAME', data_format='NDHWC', name=name)
     '''Further adjustment in strides and filter shape'''
     return deconv
 
 
-def deconv_bn_relu(inputs, output_channels, is_training, name):
+def deconv_bn_relu(inputs, output_channels, is_training, name, runtime_batch_size=None):
     with tf.variable_scope(name):
-        deconv = deconv3d(inputs=inputs, output_channels=output_channels, name=name + '_deconv')
+        deconv = deconv3d(inputs=inputs, output_channels=output_channels, name=name + '_deconv',
+                          runtime_batch_size=runtime_batch_size)
         bn = tf.contrib.layers.batch_norm(inputs=deconv, decay=0.9, scale=True, epsilon=1e-5,
                                           updates_collections=None, is_training=is_training,
                                           scope=name + '_batch_norm')

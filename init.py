@@ -10,9 +10,9 @@ def init_parameter(name):
     parameter['output_size'] = parameter['input_size']
     parameter['output_class'] = 8
     # learning strategy
-    parameter['learning_rate_dis'] = 0.0001
+    parameter['learning_rate_dis'] = 0.00001
     parameter['beta1_dis'] = 0.5
-    parameter['learning_rate_seg'] = 0.0001
+    parameter['learning_rate_seg'] = 0.00001
     parameter['beta1_seg'] = 0.5
     parameter['iteration'] = 35000
     parameter['augmentation'] = True
@@ -32,7 +32,7 @@ def init_parameter(name):
     parameter['scale'] = 1
     parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 5000
-    parameter['test_interval'] = 2000
+    parameter['test_interval'] = 5000
     # scalable number of feature maps: default 32
     parameter['feature_size'] = 32
     # sample selection

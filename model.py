@@ -66,10 +66,9 @@ class AdversarialNet:
 
         self.build_model()
 
-    def model(self, inputs):
+    def model(self, inputs, runtime_batch_size):
         is_training = (self.phase == 'train')
         # Todo: maybe change to non-dilated network
-        # Todo: change to resnet
         with tf.device(device_name_or_function=self.device[0]):
             with tf.variable_scope('seg'):
                 conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=3, stride=1,
@@ -108,7 +107,7 @@ class AdversarialNet:
                                         cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
                                         name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
                 deconv1 = deconv_bn_relu(inputs=res_8, output_channels=self.feature_size * 2, is_training=is_training,
-                                         name='deconv1')
+                                         name='deconv1', runtime_batch_size=runtime_batch_size)
                 fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_3')
                 concat_3 = deconv1 + fuse_3
@@ -124,24 +123,24 @@ class AdversarialNet:
                 '''auxiliary prediction'''
 
                 auxiliary2_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size,
-                                                 name='auxiliary2_feature_2x')
+                                                 name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
 
                 auxiliary1_feature_2x = deconv3d(inputs=res_7, output_channels=self.feature_size,
-                                                 name='auxiliary1_feature_2x')
+                                                 name='auxiliary1_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary1_feature_1x = conv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary1_feature_1x')
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('dis'):
-                # concat_dimension = 4  # channels_last
-                # extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
-                #                               axis=concat_dimension, name='extracted_feature')
-                extracted_feature = inputs
+                concat_dimension = 4  # channels_last
+                extracted_feature = tf.concat([res_10, auxiliary2_feature_2x, auxiliary1_feature_2x],
+                                              axis=concat_dimension, name='extracted_feature')
+                # extracted_feature = inputs
                 filters = [64, 64, 128, 256, 512]
                 kernels = [5, 3, 3, 3, 3]
-                strides = [1, 1, 2, 1, 1]
+                strides = [1, 1, 1, 1, 1]
 
                 dis1_1 = conv_bn_relu(inputs=extracted_feature, output_channels=filters[0], kernel_size=kernels[0],
                                       stride=strides[0], is_training=is_training, name='dis1_1')
@@ -195,16 +194,19 @@ class AdversarialNet:
             domain_feature, domain_prob, predicted_domain
 
     def build_model(self):
-        self.inputs = tf.placeholder(dtype=tf.float32, shape=[self.batch_size, self.input_size, self.input_size,
+        # use None to replace batch size
+        self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, self.input_size, self.input_size,
                                                               self.input_size, self.input_channels], name='inputs')
-        self.label = tf.placeholder(dtype=tf.int32, shape=[self.batch_size, self.input_size, self.input_size,
+        self.label = tf.placeholder(dtype=tf.int32, shape=[None, self.input_size, self.input_size,
                                                            self.input_size], name='label')
-        self.domain = tf.placeholder(dtype=tf.int32, shape=[self.batch_size], name='domain')
+        self.domain = tf.placeholder(dtype=tf.int32, shape=[None], name='domain')
         self.coefficient = tf.placeholder(dtype=tf.float32, shape=[2], name='coefficient')
         # 0: dice coefficient, 1: discriminative ratio
 
+        runtime_batch_size = tf.shape(self.inputs)[0]
+
         self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
-            self.domain_feature, self.domain_prob, self.predicted_domain = self.model(self.inputs)
+            self.domain_feature, self.domain_prob, self.predicted_domain = self.model(self.inputs, runtime_batch_size)
 
         self.main_entropy = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_entropy = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
@@ -241,7 +243,7 @@ class AdversarialNet:
 
         if not os.path.exists('logs/'):
             os.makedirs('logs/')
-        # log_writer = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
+        log_writer = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
 
         # 0: source, 1: target
         source_image_filelist, source_label_filelist = generate_filelist(
@@ -279,7 +281,7 @@ class AdversarialNet:
                 discriminative_ratio = self.compute_ratio(iteration)
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
-                dis_only = iteration % 50 >= 25  # (iteration >= 500) and
+                dis_only = iteration % 100 >= 50 and (iteration >= 1000)
                 seg_only = not dis_only
                 if seg_only:
                     self.train_task(source_image_list, source_label_list, source_domain_list,
@@ -293,7 +295,12 @@ class AdversarialNet:
                                          self.parameter['model_name'], global_step=iteration + 1)
                     print('[Save] Model saved with iteration %d' % (iteration + 1))
                 if np.mod(iteration + 1, self.parameter['test_interval']) == 0:
-                    pass
+                    # test at train
+                    parameter_dict = dict()
+                    parameter_dict['test_image_list'] = source_image_list
+                    parameter_dict['test_label_list'] = source_label_list
+                    parameter_dict['test_domain_list'] = source_domain_list
+                    self.test(reload=False, parameter_dict=parameter_dict)
 
     def compute_ratio(self, iteration):
         independent_iter = 5000
@@ -328,15 +335,9 @@ class AdversarialNet:
         loss_log.write(string_format)
         print(string_format, end='')
 
-    def test(self, reload=True):
-
-        test_image_list = None
-        test_label_list = None
-        test_domain_list = None
-
+    def test(self, reload=True, parameter_dict=None):
         # reload model or image
         if reload:
-            # Todo: load pre-trained model and checkpoint
             # self.session.run(tf.global_variables_initializer())
             if self.load_checkpoint(self.parameter['checkpoint_dir']):
                 print(" [*] Load Success")
@@ -355,6 +356,13 @@ class AdversarialNet:
             # 0: source-ct, 1: target-mri
             test_domain_list = [0] * len(test_label_filelist)
             print(f'Data loading time: {time.time() - start_time}')
+        else:
+            # skip test if error
+            if parameter_dict is None:
+                return
+            test_image_list = parameter_dict['test_image_list']
+            test_label_list = parameter_dict['test_label_list']
+            test_domain_list = parameter_dict['test_domain_list']
 
         # save log
         if not os.path.exists('logs/'):
