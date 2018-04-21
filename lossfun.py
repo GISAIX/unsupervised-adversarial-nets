@@ -23,8 +23,6 @@ def cross_entropy_loss(prediction, label, class_num):
     softmax_prediction = tf.nn.softmax(logits=prediction)
     ground_truth = tf.one_hot(indices=label, depth=class_num)
     loss = 0
-    ratio = 1e-5
-    # unique = len(tf.unique(label))
     for i in range(class_num):
         i_prediction = softmax_prediction[:, :, :, :, i]
         i_ground_truth = ground_truth[:, :, :, :, i]
@@ -32,8 +30,7 @@ def cross_entropy_loss(prediction, label, class_num):
         weight = tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
         loss -= tf.reduce_mean((1 - weight) * i_ground_truth * tf.log(
             tf.clip_by_value(t=i_prediction, clip_value_min=0.005, clip_value_max=1)))
-        ratio += (1 - weight) * weight
-    return loss / ratio  # (unique - 1) /
+    return loss
 
 
 def discriminative_loss(prediction, label, class_num=2):
