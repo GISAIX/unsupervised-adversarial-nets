@@ -32,7 +32,7 @@ def init_parameter(name):
     parameter['scale'] = 1
     parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 5000
-    parameter['test_interval'] = 2000  # template observation
+    parameter['test_interval'] = 1000  # template observation
     # scalable number of feature maps: default 32
     parameter['feature_size'] = 32
     # sample selection

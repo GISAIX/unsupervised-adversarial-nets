@@ -88,13 +88,13 @@ class AdversarialNet:
                 res_4 = aggregated_conv(inputs=res_3, output_channels=self.feature_size * 16,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
                                         name='res_4', padding='same', use_bias=False, dilation=4)
-                res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
-                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
-                                        name='res_5', padding='same', use_bias=False, dilation=2)
+                # res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
+                #                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                #                         name='res_5', padding='same', use_bias=False, dilation=2)
                 # Todo: fusion scheme
                 fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_1')
-                concat_1 = res_5 + fuse_1
+                concat_1 = res_4 + fuse_1
                 # concat_1 = tf.concat([res_5, res_3], axis=concat_dimension, name='concat_1')
                 res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
@@ -106,10 +106,10 @@ class AdversarialNet:
                 res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
                                         cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
                                         name='res_7', padding='same', use_bias=False, dilation=1, residual=False)
-                res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
-                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
-                                        name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
-                deconv1 = deconv_bn_relu(inputs=res_8, output_channels=self.feature_size * 2, is_training=is_training,
+                # res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
+                #                         cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
+                #                         name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
+                deconv1 = deconv_bn_relu(inputs=res_7, output_channels=self.feature_size * 2, is_training=is_training,
                                          name='deconv1', runtime_batch_size=runtime_batch_size)
                 fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_3')
@@ -118,15 +118,15 @@ class AdversarialNet:
                 res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
-                res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size,
-                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
-                                         name='res_10', padding='same', use_bias=False, dilation=1, residual=False)
+                # res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size,
+                #                          cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
+                #                          name='res_10', padding='same', use_bias=False, dilation=1, residual=False)
                 # predicted probability
-                predicted_feature = conv3d(inputs=res_10, output_channels=self.output_class, kernel_size=1, stride=1,
+                predicted_feature = conv3d(inputs=res_9, output_channels=self.output_class, kernel_size=1, stride=1,
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
-                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size,
+                auxiliary2_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size,
                                                  name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
@@ -138,7 +138,7 @@ class AdversarialNet:
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('dis'):
-                extracted_feature = tf.concat([res_10, auxiliary2_feature_2x, auxiliary1_feature_2x],
+                extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
                                               axis=concat_dimension, name='extracted_feature')
                 # extracted_feature = inputs
                 filters = [64, 64, 128, 256, 512]
