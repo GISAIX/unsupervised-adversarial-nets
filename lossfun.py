@@ -14,7 +14,7 @@ def dice_loss(prediction, label, class_num):
         union = tf.reduce_sum(i_prediction) + tf.reduce_sum(i_ground_truth) + 1e-5
         # adjusted weight
         weight = tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
-        loss -= 2 * intersection / union * (1 - weight)
+        loss -= 2 * intersection / union
     return 1 + loss / (unique - 1)
 
 
@@ -28,7 +28,7 @@ def cross_entropy_loss(prediction, label, class_num):
         i_ground_truth = ground_truth[:, :, :, :, i]
         # adjusted weight
         weight = tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
-        loss -= tf.reduce_mean((1 - weight) * i_ground_truth * tf.log(
+        loss -= tf.reduce_mean(i_ground_truth * tf.log(
             tf.clip_by_value(t=i_prediction, clip_value_min=0.005, clip_value_max=1)))
     return loss
 
