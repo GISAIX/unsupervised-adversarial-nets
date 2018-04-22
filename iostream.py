@@ -11,9 +11,10 @@ import numpy as np
 def load_image(image_path, label_path, scale=1):
     image = nib.load(image_path).get_data()
     label = nib.load(label_path).get_data()
-    # mean_num = np.mean(image)
-    # deviation_num = np.std(image)
-    # image = (image - mean_num) / (deviation_num + 1e-5)
+
+    mean_num = np.mean(image)
+    deviation_num = np.std(image)
+    image = (image - mean_num) / (deviation_num + 1e-5)
 
     # label mapping only for MM-WHS
     # label mapping [0, 500, 600, 420, 550, 205, 820, 850] 421 from dataset error
@@ -85,8 +86,6 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
                 _axis = np.random.randint(3)
                 image_crop = np.flip(image_crop, axis=_axis)
                 label_crop = np.flip(label_crop, axis=_axis)
-    # normalization
-    image_crop = (image_crop - np.mean(image_crop)) / (np.std(image_crop) + 1e-5)
     # NDHWC
     image_batch[0, :, :, :, 0] = image_crop
     label_batch[0, :, :, :] = label_crop

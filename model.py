@@ -122,7 +122,7 @@ class AdversarialNet:
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
-                auxiliary2_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size,
+                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size,
                                                  name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
@@ -277,8 +277,10 @@ class AdversarialNet:
 
             for iteration in range(self.iteration):
                 # observe dice loss first
-                dice_coefficient = 0.2
-                discriminative_ratio = self.compute_ratio(iteration)
+                # dice_coefficient = 0.2
+                # discriminative_ratio = self.compute_ratio(iteration)
+                dice_coefficient = 0
+                discriminative_ratio = 0
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
                 dis_only = iteration % 100 >= 50 and (iteration >= 1000)
