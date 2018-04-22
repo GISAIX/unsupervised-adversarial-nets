@@ -7,7 +7,7 @@ def dice_loss(prediction, label, class_num):
     ground_truth = tf.one_hot(indices=label, depth=class_num)
     loss = 0
     unique = len(tf.unique(label))
-    for i in range(class_num):
+    for i in range(1, class_num):
         i_prediction = softmax_prediction[:, :, :, :, i]
         i_ground_truth = ground_truth[:, :, :, :, i]
         intersection = tf.reduce_sum(i_prediction * i_ground_truth)

@@ -286,7 +286,7 @@ class AdversarialNet:
                 discriminative_ratio = 0
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
-                dis_only = iteration % 100 >= 50 and (iteration >= 1000)
+                dis_only = (iteration % 100 >= 50) and (iteration >= 1000)
                 seg_only = not dis_only
                 if seg_only:
                     self.train_task(source_image_list, source_label_list, source_domain_list,
