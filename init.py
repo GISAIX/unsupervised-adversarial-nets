@@ -10,9 +10,9 @@ def init_parameter(name):
     parameter['output_size'] = parameter['input_size']
     parameter['output_class'] = 8
     # learning strategy
-    parameter['learning_rate_dis'] = 0.00001
+    parameter['learning_rate_dis'] = 0.0001
     parameter['beta1_dis'] = 0.5
-    parameter['learning_rate_seg'] = 0.00001
+    parameter['learning_rate_seg'] = 0.0001
     parameter['beta1_seg'] = 0.5
     parameter['iteration'] = 35000
     parameter['augmentation'] = True
