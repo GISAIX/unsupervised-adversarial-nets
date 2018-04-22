@@ -67,6 +67,7 @@ class AdversarialNet:
         self.build_model()
 
     def model(self, inputs, runtime_batch_size):
+        concat_dimension = 4  # channels_last
         is_training = (self.phase == 'train')
         # Todo: maybe change to non-dilated network
         with tf.device(device_name_or_function=self.device[0]):
@@ -94,12 +95,14 @@ class AdversarialNet:
                 fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_1')
                 concat_1 = res_5 + fuse_1
+                # concat_1 = tf.concat([res_5, res_3], axis=concat_dimension, name='concat_1')
                 res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
                                         name='res_6', padding='same', use_bias=False, dilation=2, residual=False)
                 fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_2')
                 concat_2 = res_6 + fuse_2
+                # concat_2 = tf.concat([res_6, res_2], axis=concat_dimension, name='concat_2')
                 res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
                                         cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
                                         name='res_7', padding='same', use_bias=False, dilation=1, residual=False)
@@ -111,6 +114,7 @@ class AdversarialNet:
                 fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                                       is_training=is_training, name='fuse_3')
                 concat_3 = deconv1 + fuse_3
+                # concat_3 = tf.concat([deconv1, res_1], axis=concat_dimension, name='concat_3')
                 res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
@@ -134,7 +138,6 @@ class AdversarialNet:
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('dis'):
-                concat_dimension = 4  # channels_last
                 extracted_feature = tf.concat([res_10, auxiliary2_feature_2x, auxiliary1_feature_2x],
                                               axis=concat_dimension, name='extracted_feature')
                 # extracted_feature = inputs
