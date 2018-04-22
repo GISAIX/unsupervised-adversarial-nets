@@ -50,18 +50,26 @@ def visualize():
 
 
 def create_3d_view(location, mr=False, rotation_flag=False):
-    _, label_filelist = extract_path(location)
-    for i, label_filename in enumerate(label_filelist):
-        label = nib.load(label_filename).get_data()[:, :, :, 0]
+    t1_image_filename, t2_image_filename = extract_path(location)
+    for i, _ in enumerate(t2_image_filename):
 
-        # mean_num = np.mean(label)
-        # deviation_num = np.std(label)
-        # label = (label - mean_num) / (deviation_num + 1e-5)
+        '''T1, T2 here'''
+        t1_image = nib.load(t1_image_filename[i]).get_data()[:, :, :, 0]
+        t2_image = nib.load(t2_image_filename[i]).get_data()[:, :, :, 0]
 
-        img = np.load('/Users/dqxu/Downloads/test_test_20180417_225033.npz')
-        data = img['performance']
-        print(data)
-        img = img['inference'][0, 0, :, :, :, 0]
+        mean_num = np.mean(t1_image)
+        deviation_num = np.std(t1_image)
+        t1_image = (t1_image - mean_num) / (deviation_num + 1e-5)
+        mean_num = np.mean(t2_image)
+        deviation_num = np.std(t2_image)
+        t2_image = (t2_image - mean_num) / (deviation_num + 1e-5)
+
+        '''comment one of these lines'''
+        img = np.load('../test_no_normalization.npz')
+        # img = np.load('../test_with_normalization_1.npz')
+        # img = np.load('../test_with_normalization_2.npz')
+        print('L2 loss, gradient loss', img['performance'], 'domain accuracy: fake T2, real T2', img['domain_accuracy'])
+        img = img['inference'][i, 0, :, :, :, 0]
         mean_num = np.mean(img)
         deviation_num = np.std(img)
         img = (img - mean_num) / (deviation_num + 1e-5)
@@ -74,25 +82,8 @@ def create_3d_view(location, mr=False, rotation_flag=False):
 
         # compute_performance(img, label)
         slice_visualize(img)
-
-        name = 't2_'
-        # ratio = 0.25
-        # if mr:
-        #     name = 'mr_'
-        #     ratio = 0.5
-        # if rotation_flag:
-        #     name += 'r_'
-        #     label = rotate(input=label, angle=90, axes=(0, 2), reshape=True, order=0)
-        #     label = rotate(input=label, angle=90, axes=(1, 2), reshape=True, order=0)
-        #     label = rotate(input=label, angle=90, axes=(0, 1), reshape=True, order=0)
-
-        # output_shape = (np.array(label.shape) * 0.1).astype(dtype='int32')
-        # nearest_neighbor = 0
-        # label = resize(image=label, output_shape=output_shape, order=nearest_neighbor,
-        #                preserve_range=True, mode='constant')
-
-        # model(label, name + str(i))
-        slice_visualize(label)
+        slice_visualize(t1_image)
+        slice_visualize(t2_image)
 
 
 def model(label, name):
