@@ -53,6 +53,7 @@ class AdversarialNet:
             self.device = ['/gpu:0', '/gpu:0', '/cpu:0']
         self.batch_size = parameter['batch_size']
         self.input_size = parameter['input_size']
+        self.test_stride = parameter['test_stride']
         self.input_channels = parameter['input_channels']
         self.output_size = parameter['output_size']
         self.output_class = parameter['output_class']
@@ -72,7 +73,6 @@ class AdversarialNet:
     def model(self, inputs, runtime_batch_size):
         concat_dimension = 4  # channels_last
         is_training = (self.phase == 'train')
-        # Todo: maybe change to non-dilated network
         with tf.device(device_name_or_function=self.device[0]):
             with tf.variable_scope('seg'):
                 conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=7, stride=1,
@@ -98,21 +98,21 @@ class AdversarialNet:
                 concat_1 = tf.concat([res_4, res_3], axis=concat_dimension, name='concat_1')
                 res_5 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
                                         cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
-                                        name='res_5', padding='same', use_bias=False, dilation=2, residual=False)
+                                        name='res_5', padding='same', use_bias=False, dilation=2, residual=True)
                 # fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
                 #                       is_training=is_training, name='fuse_2')
                 # concat_2 = res_6 + fuse_2
                 concat_2 = tf.concat([res_5, res_2], axis=concat_dimension, name='concat_2')
                 res_6 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
                                         cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
-                                        name='res_6', padding='same', use_bias=False, dilation=1, residual=False)
+                                        name='res_6', padding='same', use_bias=False, dilation=1, residual=True)
                 deconv1 = deconv_bn_relu(inputs=res_6, output_channels=self.feature_size * 4, is_training=is_training,
                                          name='deconv1', runtime_batch_size=runtime_batch_size)
                 # fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                 #                       is_training=is_training, name='fuse_3')
                 # concat_3 = deconv1 + fuse_3
                 concat_3 = tf.concat([deconv1, res_1], axis=concat_dimension, name='concat_3')
-                res_7 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size * 2,
+                res_7 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
                 feature = res_7
@@ -121,17 +121,17 @@ class AdversarialNet:
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
-                auxiliary3_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size * 2,
+                auxiliary3_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size,
                                                  name='auxiliary3_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary3_feature_1x = conv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary3_feature_1x')
 
-                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size * 2,
+                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size,
                                                  name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
 
-                auxiliary1_feature_2x = deconv3d(inputs=res_6, output_channels=self.feature_size * 2,
+                auxiliary1_feature_2x = deconv3d(inputs=res_6, output_channels=self.feature_size,
                                                  name='auxiliary1_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary1_feature_1x = conv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary1_feature_1x')
@@ -250,7 +250,7 @@ class AdversarialNet:
 
         if not os.path.exists('logs/'):
             os.makedirs('logs/')
-        log_writer = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
+        # log_writer = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
 
         # 0: source, 1: target
         source_image_filelist, source_label_filelist = generate_filelist(
@@ -374,7 +374,7 @@ class AdversarialNet:
         # save log
         if not os.path.exists('logs/'):
             os.makedirs('logs/')
-        _ = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
+        # _ = tf.summary.FileWriter(logdir='logs/', graph=self.session.graph)
 
         if not os.path.exists('test/'):
             os.makedirs('test/')
@@ -387,13 +387,13 @@ class AdversarialNet:
             evaluation = Evaluation()
             for ith in range(len(test_label_list)):
                 # not used in test
-                dice_coefficient = 0
-                discriminative_ratio = 0
+                dice_coefficient = 0.1
+                discriminative_ratio = 0.1
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
                 i_inference = infer(image=test_image_list[ith], label=test_label_list[ith],
                                     domain=test_domain_list[ith], input_size=self.input_size,
-                                    strike=self.input_size, infer_task=self.test_task,
+                                    stride=self.test_stride, infer_task=self.test_task,
                                     coefficient=coefficient, loss_log=loss_log, evaluation=evaluation, sample=ith)
                 i_inference = i_inference[0, :, :, :]
                 np.savez('test/infer_{}_sample_{}.npz'.format(self.parameter['name'], ith), inference=i_inference)

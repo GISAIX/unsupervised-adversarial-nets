@@ -89,14 +89,14 @@ def compute_domain_performance(discrimination, domain_label):
     return accuracy
 
 
-def infer(image, label, domain, input_size=32, strike=32, channel=1,
+def infer(image, label, domain, input_size=32, stride=32, channel=1,
           infer_task=None, coefficient=None, loss_log=None, evaluation=None, sample=None):
 
     # # fast forwarding: 32, center-cropping: 16
-    # strike, equivalent to effective
+    # stride, equivalent to effective
 
     # skip
-    strike_skip = (input_size - strike) // 2
+    stride_skip = (input_size - stride) // 2
     depth, height, width = image.shape
 
     # axis expansion
@@ -112,9 +112,9 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
     domain_batch = np.array([domain], dtype=np.int32)
 
     # -1 symbol for last
-    depth_range = np.append(np.arange(depth - input_size + 1, step=strike), -1)
-    height_range = np.append(np.arange(height - input_size + 1, step=strike), -1)
-    width_range = np.append(np.arange(width - input_size + 1, step=strike), -1)
+    depth_range = np.append(np.arange(depth - input_size + 1, step=stride), -1)
+    height_range = np.append(np.arange(height - input_size + 1, step=stride), -1)
+    width_range = np.append(np.arange(width - input_size + 1, step=stride), -1)
 
     start_time = time.time()
     for d in depth_range:
@@ -122,38 +122,38 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
             for w in width_range:
                 # default situation
                 fetch_d, fetch_h, fetch_w = d, h, w  # fetch variable for the last batch
-                put_d, put_h, put_w = d + strike_skip, h + strike_skip, w + strike_skip  # put for inference position
-                size_d, size_h, size_w = input_size - strike_skip, input_size - strike_skip, input_size - strike_skip
+                put_d, put_h, put_w = d + stride_skip, h + stride_skip, w + stride_skip  # put for inference position
+                size_d, size_h, size_w = input_size - stride_skip, input_size - stride_skip, input_size - stride_skip
                 # for inference length
 
                 if d == -1:
-                    if depth % strike == 0:
+                    if depth % stride == 0:
                         continue
                     else:
                         fetch_d = depth - input_size
-                        size_d = depth % strike
+                        size_d = depth % stride
                         put_d = depth - size_d
                 elif d == 0:
                     put_d = d
                     size_d = input_size
 
                 if h == -1:
-                    if height % strike == 0:
+                    if height % stride == 0:
                         continue
                     else:
                         fetch_h = height - input_size
-                        size_h = height % strike
+                        size_h = height % stride
                         put_h = height - size_h
                 elif h == 0:
                     put_h = h
                     size_h = input_size
 
                 if w == -1:
-                    if width % strike == 0:
+                    if width % stride == 0:
                         continue
                     else:
                         fetch_w = width - input_size
-                        size_w = width % strike
+                        size_w = width % stride
                         put_w = width - size_w
                 elif w == 0:
                     put_w = w
@@ -184,7 +184,7 @@ def infer(image, label, domain, input_size=32, strike=32, channel=1,
     # print('image:', image.shape)
     # print('label:', label.shape)
     # print('inference:', inference.shape)
-    # print(f'strike: {strike}, equal: {np.array_equal(inference, label)}', )
+    # print(f'stride: {stride}, equal: {np.array_equal(inference, label)}', )
     accuracy = compute_domain_performance(discrimination, domain)
     dice, jaccard, precision, recall = compute_performance(inference, label, 8)
     evaluation.add(dice, jaccard, precision, recall)
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     print('image:', img.shape)
     print('label:', truth.shape)
     e = Evaluation()
-    infer(img, truth, 0, strike=32, evaluation=e)
+    infer(img, truth, 0, stride=32, evaluation=e)
     print(e.retrieve().shape)
     print(e.retrieve_domain().shape)
     print(str(e.retrieve()))

@@ -14,7 +14,7 @@ def init_parameter(name):
     parameter['beta1_dis'] = 0.5
     parameter['learning_rate_seg'] = 0.001
     parameter['beta1_seg'] = 0.5
-    parameter['iteration'] = 35000
+    parameter['iteration'] = 30000
     parameter['augmentation'] = True
     # data location
     parameter['dataset'] = 'MM-WHS'  # 'iSeg'
@@ -30,9 +30,9 @@ def init_parameter(name):
     parameter['model_name'] = f'mm-whs_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
     parameter['scale'] = 0.6
-    parameter['test_stride'] = 32  # for overlap
+    parameter['test_stride'] = 64  # for overlap
     parameter['save_interval'] = 5000
-    parameter['test_interval'] = 1000  # TODO: template observation
+    parameter['test_interval'] = 5000  # No observation
     # scalable number of feature maps: default 32
     parameter['feature_size'] = 32
     # sample selection

@@ -17,7 +17,7 @@ def extract_path(directory):
 
 
 def extract_image(image_path, label_path):
-    image, label = load_image(image_path, label_path)
+    image, label = load_image(image_path, label_path, scale=0.6)
     print(image.shape, label.shape, image.dtype, label.dtype)
     return image, label
 

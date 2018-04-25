@@ -11,8 +11,7 @@ def dice_loss(prediction, label, class_num):
         i_prediction = softmax_prediction[:, :, :, :, i]
         i_ground_truth = ground_truth[:, :, :, :, i]
         intersection = tf.reduce_sum(i_prediction * i_ground_truth)
-        # square before
-        union = tf.reduce_sum(i_prediction) + tf.reduce_sum(i_ground_truth) + 1e-5
+        union = tf.reduce_sum(i_prediction * i_prediction) + tf.reduce_sum(i_ground_truth * i_ground_truth) + 1e-5
         # adjusted weight
         weight = 1 - tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
         loss += (1 - 2 * intersection / union) * weight
