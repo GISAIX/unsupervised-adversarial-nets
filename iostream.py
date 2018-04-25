@@ -61,7 +61,7 @@ def crop_batch(image, label, input_size, channel=1, flipping=False, rotation=Fal
         label_set = set(np.unique(label_crop))
         if len(label_set) == 1:
             continue
-        elif len(label_set) == 2 and np.random.randint(100) >= 50:
+        elif len(label_set) <= 3 and np.random.randint(100) >= 50:
             print('!', end='')
             continue
         else:
