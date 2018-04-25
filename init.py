@@ -29,7 +29,7 @@ def init_parameter(name):
     parameter['name'] = name
     parameter['model_name'] = f'mm-whs_{name}.model'
     parameter['checkpoint_dir'] = 'checkpoint/'
-    parameter['scale'] = 1
+    parameter['scale'] = 0.6
     parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 5000
     parameter['test_interval'] = 1000  # TODO: template observation

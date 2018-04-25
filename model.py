@@ -142,39 +142,38 @@ class AdversarialNet:
                                                auxiliary1_feature_2x], axis=concat_dimension, name='extracted_feature')
                 # extracted_feature = inputs
                 filters = [64, 64, 128, 256, 512]
-                kernels = [5, 3, 3, 3, 3]
-                strides = [1, 1, 1, 1, 1]
+                strides = [1, 1, 2, 1, 2]
 
-                dis1_1 = conv_bn_relu(inputs=extracted_feature, output_channels=filters[0], kernel_size=kernels[0],
+                dis1_1 = conv_bn_relu(inputs=extracted_feature, output_channels=filters[0], kernel_size=7,
                                       stride=strides[0], is_training=is_training, name='dis1_1')
                 pool1_2 = tf.layers.max_pooling3d(inputs=dis1_1, pool_size=3, strides=2, name='pool1_2', padding='same')
 
-                dis2_1 = residual_block(inputs=pool1_2, output_channels=filters[1], kernel_size=kernels[1],
+                dis2_1 = residual_block(inputs=pool1_2, output_channels=filters[1], kernel_size=3,
                                         stride=strides[1], is_training=is_training, name='dis2_1',
                                         padding='same', use_bias=False, dilation=1, residual=True)
-                dis2_2 = residual_block(inputs=dis2_1, output_channels=filters[1], kernel_size=kernels[1],
-                                        stride=strides[1], is_training=is_training, name='dis2_2',
+                dis2_2 = residual_block(inputs=dis2_1, output_channels=filters[1], kernel_size=3,
+                                        stride=1, is_training=is_training, name='dis2_2',
                                         padding='same', use_bias=False, dilation=1, residual=True)
 
-                dis3_1 = residual_block(inputs=dis2_2, output_channels=filters[2], kernel_size=kernels[2],
+                dis3_1 = residual_block(inputs=dis2_2, output_channels=filters[2], kernel_size=3,
                                         stride=strides[2], is_training=is_training, name='dis3_1',
                                         padding='same', use_bias=False, dilation=1, residual=True)
-                dis3_2 = residual_block(inputs=dis3_1, output_channels=filters[2], kernel_size=kernels[1],
-                                        stride=strides[1], is_training=is_training, name='dis3_2',
+                dis3_2 = residual_block(inputs=dis3_1, output_channels=filters[2], kernel_size=3,
+                                        stride=1, is_training=is_training, name='dis3_2',
                                         padding='same', use_bias=False, dilation=1, residual=True)
 
-                dis4_1 = residual_block(inputs=dis3_2, output_channels=filters[3], kernel_size=kernels[3],
+                dis4_1 = residual_block(inputs=dis3_2, output_channels=filters[3], kernel_size=3,
                                         stride=strides[3], is_training=is_training, name='dis4_1',
                                         padding='same', use_bias=False, dilation=1, residual=True)
-                dis4_2 = residual_block(inputs=dis4_1, output_channels=filters[3], kernel_size=kernels[1],
-                                        stride=strides[1], is_training=is_training, name='dis4_2',
+                dis4_2 = residual_block(inputs=dis4_1, output_channels=filters[3], kernel_size=3,
+                                        stride=1, is_training=is_training, name='dis4_2',
                                         padding='same', use_bias=False, dilation=1, residual=True)
 
-                dis5_1 = residual_block(inputs=dis4_2, output_channels=filters[4], kernel_size=kernels[4],
+                dis5_1 = residual_block(inputs=dis4_2, output_channels=filters[4], kernel_size=3,
                                         stride=strides[4], is_training=is_training, name='dis5_1',
                                         padding='same', use_bias=False, dilation=1, residual=True)
-                dis5_2 = residual_block(inputs=dis5_1, output_channels=filters[4], kernel_size=kernels[1],
-                                        stride=strides[1], is_training=is_training, name='dis5_2',
+                dis5_2 = residual_block(inputs=dis5_1, output_channels=filters[4], kernel_size=3,
+                                        stride=1, is_training=is_training, name='dis5_2',
                                         padding='same', use_bias=False, dilation=1, residual=True)
 
                 global_average = tf.reduce_mean(dis5_2, [1, 2, 3])
@@ -285,10 +284,8 @@ class AdversarialNet:
 
             for iteration in range(self.iteration):
                 # observe dice loss first
-                # dice_coefficient = 0.2
-                # discriminative_ratio = self.compute_ratio(iteration)
-                dice_coefficient = 0
-                discriminative_ratio = 0
+                dice_coefficient = 0.1
+                discriminative_ratio = self.compute_ratio(iteration)
                 coefficient = np.array([dice_coefficient, discriminative_ratio], dtype=np.float32)
 
                 dis_only = (iteration % 100 >= 50) and (iteration >= 1000)

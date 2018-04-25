@@ -16,7 +16,7 @@ def dice_loss(prediction, label, class_num):
         # adjusted weight
         weight = 1 - tf.reduce_sum(i_ground_truth) / tf.reduce_sum(ground_truth)
         loss += (1 - 2 * intersection / union) * weight
-    return loss
+    return loss / class_num
 
 
 def cross_entropy_loss(prediction, label, class_num):
