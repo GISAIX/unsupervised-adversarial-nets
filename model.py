@@ -96,24 +96,24 @@ class AdversarialNet:
                 #                       is_training=is_training, name='fuse_1')
                 # concat_1 = res_4 + fuse_1
                 concat_1 = tf.concat([res_4, res_3], axis=concat_dimension, name='concat_1')
-                res_5 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 16,
-                                        cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
+                res_5 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
+                                        cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
                                         name='res_5', padding='same', use_bias=False, dilation=2, residual=False)
                 # fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
                 #                       is_training=is_training, name='fuse_2')
                 # concat_2 = res_6 + fuse_2
                 concat_2 = tf.concat([res_5, res_2], axis=concat_dimension, name='concat_2')
-                res_6 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 8,
-                                        cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
+                res_6 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
                                         name='res_6', padding='same', use_bias=False, dilation=1, residual=False)
-                deconv1 = deconv_bn_relu(inputs=res_6, output_channels=self.feature_size * 8, is_training=is_training,
+                deconv1 = deconv_bn_relu(inputs=res_6, output_channels=self.feature_size * 4, is_training=is_training,
                                          name='deconv1', runtime_batch_size=runtime_batch_size)
                 # fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
                 #                       is_training=is_training, name='fuse_3')
                 # concat_3 = deconv1 + fuse_3
                 concat_3 = tf.concat([deconv1, res_1], axis=concat_dimension, name='concat_3')
-                res_7 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size * 4,
-                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
+                res_7 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size * 2,
+                                        cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
                 feature = res_7
                 # predicted probability
@@ -121,17 +121,17 @@ class AdversarialNet:
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
-                auxiliary3_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size * 4,
+                auxiliary3_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size * 2,
                                                  name='auxiliary3_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary3_feature_1x = conv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary3_feature_1x')
 
-                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size * 4,
+                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size * 2,
                                                  name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
 
-                auxiliary1_feature_2x = deconv3d(inputs=res_6, output_channels=self.feature_size * 4,
+                auxiliary1_feature_2x = deconv3d(inputs=res_6, output_channels=self.feature_size * 2,
                                                  name='auxiliary1_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary1_feature_1x = conv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary1_feature_1x')
