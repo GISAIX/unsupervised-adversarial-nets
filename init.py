@@ -3,9 +3,9 @@
 def init_parameter(name):
     parameter = dict()
     # shape setting
-    parameter['batch_size'] = 6
+    parameter['batch_size'] = 1  # 1
     parameter['train_batch_size'] = parameter['batch_size']
-    parameter['input_size'] = 32
+    parameter['input_size'] = 64  # 64
     parameter['input_channels'] = 1
     parameter['output_size'] = parameter['input_size']
     parameter['output_class'] = 8
@@ -32,7 +32,7 @@ def init_parameter(name):
     parameter['scale'] = 1
     parameter['test_stride'] = 32  # for overlap
     parameter['save_interval'] = 5000
-    parameter['test_interval'] = 1000  # template observation
+    parameter['test_interval'] = 1000  # TODO: template observation
     # scalable number of feature maps: default 32
     parameter['feature_size'] = 32
     # sample selection

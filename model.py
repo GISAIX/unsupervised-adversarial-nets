@@ -22,6 +22,7 @@ class AdversarialNet:
         self.predicted_label = None
         self.auxiliary1_feature_1x = None
         self.auxiliary2_feature_1x = None
+        self.auxiliary3_feature_1x = None
         self.domain_prob = None
         self.domain_feature = None
         self.predicted_domain = None
@@ -29,10 +30,12 @@ class AdversarialNet:
         self.main_entropy = None
         self.auxiliary1_entropy = None
         self.auxiliary2_entropy = None
+        self.auxiliary3_entropy = None
         self.seg_entropy = None
         self.main_dice = None
         self.auxiliary1_dice = None
         self.auxiliary2_dice = None
+        self.auxiliary3_dice = None
         self.seg_dice = None
         self.dis_loss = None
         self.seg_loss = None
@@ -72,7 +75,7 @@ class AdversarialNet:
         # Todo: maybe change to non-dilated network
         with tf.device(device_name_or_function=self.device[0]):
             with tf.variable_scope('seg'):
-                conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=3, stride=1,
+                conv_1 = conv_bn_relu(inputs=inputs, output_channels=self.feature_size, kernel_size=7, stride=1,
                                       is_training=is_training, name='conv_1')
                 res_1 = aggregated_conv(inputs=conv_1, output_channels=self.feature_size * 2,
                                         cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
@@ -88,58 +91,55 @@ class AdversarialNet:
                 res_4 = aggregated_conv(inputs=res_3, output_channels=self.feature_size * 16,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
                                         name='res_4', padding='same', use_bias=False, dilation=4)
-                # res_5 = aggregated_conv(inputs=res_4, output_channels=self.feature_size * 16,
-                #                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
-                #                         name='res_5', padding='same', use_bias=False, dilation=2)
                 # Todo: fusion scheme
-                fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
-                                      is_training=is_training, name='fuse_1')
-                concat_1 = res_4 + fuse_1
-                # concat_1 = tf.concat([res_5, res_3], axis=concat_dimension, name='concat_1')
-                res_6 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 8,
+                # fuse_1 = conv_bn_relu(inputs=res_3, output_channels=self.feature_size * 16, kernel_size=1, stride=1,
+                #                       is_training=is_training, name='fuse_1')
+                # concat_1 = res_4 + fuse_1
+                concat_1 = tf.concat([res_4, res_3], axis=concat_dimension, name='concat_1')
+                res_5 = aggregated_conv(inputs=concat_1, output_channels=self.feature_size * 16,
                                         cardinality=self.cardinality * 8, bottleneck_d=4, is_training=is_training,
-                                        name='res_6', padding='same', use_bias=False, dilation=2, residual=False)
-                fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
-                                      is_training=is_training, name='fuse_2')
-                concat_2 = res_6 + fuse_2
-                # concat_2 = tf.concat([res_6, res_2], axis=concat_dimension, name='concat_2')
-                res_7 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 4,
+                                        name='res_5', padding='same', use_bias=False, dilation=2, residual=False)
+                # fuse_2 = conv_bn_relu(inputs=res_2, output_channels=self.feature_size * 8, kernel_size=1, stride=1,
+                #                       is_training=is_training, name='fuse_2')
+                # concat_2 = res_6 + fuse_2
+                concat_2 = tf.concat([res_5, res_2], axis=concat_dimension, name='concat_2')
+                res_6 = aggregated_conv(inputs=concat_2, output_channels=self.feature_size * 8,
                                         cardinality=self.cardinality * 4, bottleneck_d=4, is_training=is_training,
-                                        name='res_7', padding='same', use_bias=False, dilation=1, residual=False)
-                # res_8 = aggregated_conv(inputs=res_7, output_channels=self.feature_size * 4,
-                #                         cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
-                #                         name='res_8', padding='same', use_bias=False, dilation=1, residual=False)
-                deconv1 = deconv_bn_relu(inputs=res_7, output_channels=self.feature_size * 2, is_training=is_training,
+                                        name='res_6', padding='same', use_bias=False, dilation=1, residual=False)
+                deconv1 = deconv_bn_relu(inputs=res_6, output_channels=self.feature_size * 8, is_training=is_training,
                                          name='deconv1', runtime_batch_size=runtime_batch_size)
-                fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
-                                      is_training=is_training, name='fuse_3')
-                concat_3 = deconv1 + fuse_3
-                # concat_3 = tf.concat([deconv1, res_1], axis=concat_dimension, name='concat_3')
-                res_9 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size,
-                                        cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
+                # fuse_3 = conv_bn_relu(inputs=res_1, output_channels=self.feature_size * 2, kernel_size=1, stride=1,
+                #                       is_training=is_training, name='fuse_3')
+                # concat_3 = deconv1 + fuse_3
+                concat_3 = tf.concat([deconv1, res_1], axis=concat_dimension, name='concat_3')
+                res_7 = aggregated_conv(inputs=concat_3, output_channels=self.feature_size * 4,
+                                        cardinality=self.cardinality * 2, bottleneck_d=4, is_training=is_training,
                                         name='res_9', padding='same', use_bias=False, dilation=1, residual=False)
-                # res_10 = aggregated_conv(inputs=res_9, output_channels=self.feature_size,
-                #                          cardinality=self.cardinality, bottleneck_d=4, is_training=is_training,
-                #                          name='res_10', padding='same', use_bias=False, dilation=1, residual=False)
+                feature = res_7
                 # predicted probability
-                predicted_feature = conv3d(inputs=res_9, output_channels=self.output_class, kernel_size=1, stride=1,
+                predicted_feature = conv3d(inputs=feature, output_channels=self.output_class, kernel_size=1, stride=1,
                                            use_bias=True, name='predicted_feature')
                 '''auxiliary prediction'''
 
-                auxiliary2_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size,
+                auxiliary3_feature_2x = deconv3d(inputs=res_4, output_channels=self.feature_size * 4,
+                                                 name='auxiliary3_feature_2x', runtime_batch_size=runtime_batch_size)
+                auxiliary3_feature_1x = conv3d(inputs=auxiliary3_feature_2x, output_channels=self.output_class,
+                                               kernel_size=1, stride=1, use_bias=True, name='auxiliary3_feature_1x')
+
+                auxiliary2_feature_2x = deconv3d(inputs=res_5, output_channels=self.feature_size * 4,
                                                  name='auxiliary2_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary2_feature_1x = conv3d(inputs=auxiliary2_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary2_feature_1x')
 
-                auxiliary1_feature_2x = deconv3d(inputs=res_7, output_channels=self.feature_size,
+                auxiliary1_feature_2x = deconv3d(inputs=res_6, output_channels=self.feature_size * 4,
                                                  name='auxiliary1_feature_2x', runtime_batch_size=runtime_batch_size)
                 auxiliary1_feature_1x = conv3d(inputs=auxiliary1_feature_2x, output_channels=self.output_class,
                                                kernel_size=1, stride=1, use_bias=True, name='auxiliary1_feature_1x')
 
         with tf.device(device_name_or_function=self.device[1]):
             with tf.variable_scope('dis'):
-                extracted_feature = tf.concat([res_9, auxiliary2_feature_2x, auxiliary1_feature_2x],
-                                              axis=concat_dimension, name='extracted_feature')
+                extracted_feature = tf.concat([feature, auxiliary3_feature_2x, auxiliary2_feature_2x,
+                                               auxiliary1_feature_2x], axis=concat_dimension, name='extracted_feature')
                 # extracted_feature = inputs
                 filters = [64, 64, 128, 256, 512]
                 kernels = [5, 3, 3, 3, 3]
@@ -194,7 +194,7 @@ class AdversarialNet:
             predicted_domain = tf.argmax(input=domain_prob, axis=1, name='predicted_domain')
 
         return predicted_feature, predicted_label, auxiliary1_feature_1x, auxiliary2_feature_1x, \
-            domain_feature, domain_prob, predicted_domain
+            auxiliary3_feature_1x, domain_feature, domain_prob, predicted_domain
 
     def build_model(self):
         # use None to replace batch size
@@ -209,17 +209,22 @@ class AdversarialNet:
         runtime_batch_size = tf.shape(self.inputs)[0]
 
         self.predicted_feature, self.predicted_label, self.auxiliary1_feature_1x, self.auxiliary2_feature_1x, \
-            self.domain_feature, self.domain_prob, self.predicted_domain = self.model(self.inputs, runtime_batch_size)
+            self.auxiliary3_feature_1x, self.domain_feature, self.domain_prob, self.predicted_domain = self.model(
+                self.inputs, runtime_batch_size)
 
         self.main_entropy = cross_entropy_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_entropy = cross_entropy_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
         self.auxiliary2_entropy = cross_entropy_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
-        self.seg_entropy = (self.main_entropy + 0.6 * self.auxiliary1_entropy + 0.3 * self.auxiliary2_entropy) / 1.9
+        self.auxiliary3_entropy = cross_entropy_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+        self.seg_entropy = (self.main_entropy + 0.9 * self.auxiliary1_entropy + 0.6 * self.auxiliary2_entropy +
+                            0.3 * self.auxiliary3_entropy) / 2.8
 
         self.main_dice = dice_loss(self.predicted_feature, self.label, self.output_class)
         self.auxiliary1_dice = dice_loss(self.auxiliary1_feature_1x, self.label, self.output_class)
         self.auxiliary2_dice = dice_loss(self.auxiliary2_feature_1x, self.label, self.output_class)
-        self.seg_dice = (self.main_dice + 0.6 * self.auxiliary1_dice + 0.3 * self.auxiliary2_dice) / 1.9
+        self.auxiliary3_dice = dice_loss(self.auxiliary3_feature_1x, self.label, self.output_class)
+        self.seg_dice = (self.main_dice + 0.8 * self.auxiliary1_dice + 0.4 * self.auxiliary2_dice +
+                         0.2 * self.auxiliary3_dice) / 2.4
 
         self.dis_loss = discriminative_loss(self.domain_feature, self.domain)
         self.seg_loss = self.seg_entropy + self.seg_dice * self.coefficient[0] - self.dis_loss * self.coefficient[1]
