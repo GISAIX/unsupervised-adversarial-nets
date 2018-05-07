@@ -17,7 +17,7 @@ def extract_path(directory):
 
 
 def extract_image(image_path, label_path):
-    image, label = load_image(image_path, label_path, scale=0.6)
+    image, label = load_image(image_path, label_path, scale=1)
     print(image.shape, label.shape, image.dtype, label.dtype)
     return image, label
 
@@ -29,13 +29,15 @@ def slice_visualize(image):
     max_num = np.max(image)
     image = (image - min_num) / (min_num + max_num) * 255
     image = image.astype('uint8')
-    print(np.min(image), np.max(image))
-    print(np.unique(image))
+    # print(np.min(image), np.max(image))
+    # print(np.unique(image))
     '''visualization'''
-    dimension = np.asarray(image.shape)
-    for k in range(dimension[2]):
-        cv2.imshow('Slice', image[:, :, k])
-        cv2.waitKey(0)
+    plt.imshow(image[:, :, 80], cmap='gray', origin='lower')
+    plt.show()
+    # dimension = np.asarray(image.shape)
+    # for k in range(dimension[2]):
+    #     cv2.imshow('Slice', image[:, :, k])
+    #     cv2.waitKey(0)
 
 
 def visualize():
@@ -43,8 +45,8 @@ def visualize():
     image_filelist, label_filelist = extract_path(location)
     for i in range(len(image_filelist)):
         img, gt = extract_image(image_filelist[i], label_filelist[i])
-        slice_visualize(gt)
         slice_visualize(img)
+        slice_visualize(gt)
         # print(np.unique(gt, return_counts=True))
         break
 
@@ -99,7 +101,7 @@ def model(label, name):
 
 
 if __name__ == '__main__':
-    create_3d_view('../MM-WHS/ct_train/')
-    create_3d_view('../MM-WHS/mr_train/', mr=True)
-    create_3d_view('../MM-WHS/mr_train/', mr=True, rotation_flag=True)
-    # visualize()
+    # create_3d_view('../MM-WHS/ct_train/')
+    # create_3d_view('../MM-WHS/mr_train/', mr=True)
+    # create_3d_view('../MM-WHS/mr_train/', mr=True, rotation_flag=True)
+    visualize()

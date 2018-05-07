@@ -178,7 +178,7 @@ class AdversarialNet:
 
                 global_average = tf.reduce_mean(dis5_2, [1, 2, 3])
                 fc_1 = tf.contrib.layers.fully_connected(
-                    inputs=global_average, num_outputs=64, scope='fc_1', activation_fn=None,
+                    inputs=global_average, num_outputs=64, scope='fc_1', activation_fn=tf.nn.relu,
                     weights_regularizer=tf.contrib.slim.l2_regularizer(scale=0.0005))
                 domain_feature = tf.contrib.layers.fully_connected(
                     inputs=fc_1, num_outputs=2, scope='domain_feature', activation_fn=None,
